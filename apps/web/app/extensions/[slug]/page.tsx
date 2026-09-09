@@ -16,7 +16,7 @@ import { VersionBadge } from "@/components/version-badge";
 import { formatBytes, getLatestRelease, type ReleaseInfo } from "@/lib/releases";
 import { SITE, sourceUrlFor } from "@/lib/site";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export function generateStaticParams() {
   return getSlugs().map((slug) => ({ slug }));

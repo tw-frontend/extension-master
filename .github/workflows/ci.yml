@@ -35,6 +35,9 @@ jobs:
       - name: Tests (per extension)
         run: pnpm -r --if-present test
 
+      - name: Release detection regression tests
+        run: node --test scripts/detect-changed-extensions.test.mjs
+
       - name: Validate extension registry
         run: pnpm extension:validate
 

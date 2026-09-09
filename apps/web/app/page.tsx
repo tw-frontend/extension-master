@@ -6,7 +6,7 @@ import { getExtensions } from "@extensions-hub/extension-registry";
 import { getLatestRelease, type ReleaseInfo } from "@/lib/releases";
 import { SITE, repoUrl } from "@/lib/site";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export default async function HomePage() {
   const extensions = getExtensions();
