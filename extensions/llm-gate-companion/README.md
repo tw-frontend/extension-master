@@ -1,8 +1,8 @@
-# LLM Gate Companion — 0.1.0
+# LLM Gate Companion — 0.2.0
 
-Work-in-progress Chromium extension for private Simra LLM Gate budget and usage data.
+Chromium extension for private Simra LLM Gate budget and usage data.
 
-This first module establishes the extension shell and provides a validated data boundary for budget, spend, and request analytics. Jalali billing insights, dashboard UI, and OpenRouter model recommendations are separate capabilities tracked by the initiative capability map.
+Clicking the toolbar icon opens a dashboard for API-key setup, current Jalali billing-month progress, remaining budget, date-ranged spend and requests, rankings, and most-used models. OpenRouter model recommendations remain a separate capability tracked by the initiative capability map.
 
 ## Data contract
 
@@ -33,10 +33,10 @@ Each response is validated before snake-case upstream fields are normalized to c
 - It does not request cookies, tabs, scripting, or content-script permissions.
 - A configured API key will live in `chrome.storage.local`, which is persistent but not encrypted.
 - The popup-facing status and load contracts never return the saved key. Request URLs and upstream response bodies are never logged or included in errors.
-- Replacing a key uses `gate/configure`; removing it uses `gate/clear`. The later UI module will expose both actions without putting the current key back into the page.
+- Replacing a key uses `gate/configure`; removing it uses `gate/clear`. The popup exposes both actions without putting the current key back into the page.
 - Never reuse the API key included in discovery notes; rotate it before configuring the finished extension.
 
-Because the dashboard UI is intentionally outside this first capability module, the current package is marked `wip`. Do not configure a live key through DevTools; wait for the reviewed UI module so the key enters only through the intended extension surface.
+The package is marked `beta` while live API compatibility is validated. Configure the key only through the extension popup.
 
 ## Development
 

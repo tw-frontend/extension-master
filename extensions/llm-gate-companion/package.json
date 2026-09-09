@@ -1,11 +1,11 @@
 {
   "name": "llm-gate-companion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
     "coverage": "node --experimental-test-coverage --test tests/*.test.js",
-    "check": "for file in background.js src/gate/*.js; do node --check \"$file\" || exit 1; done"
+    "check": "for file in background.js popup.js src/*.js src/gate/*.js; do node --check \"$file\" || exit 1; done"
   }
 }

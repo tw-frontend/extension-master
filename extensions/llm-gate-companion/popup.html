@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LLM Gate Companion</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <img src="icons/icon-128.png" alt="" width="32" height="32" />
+        <div><p class="eyebrow">LLM Gate</p><h1>Usage companion</h1></div>
+      </div>
+      <span id="connection-status" class="connection" role="status">Checking…</span>
+    </header>
+
+    <main>
+      <section id="setup-view" class="panel setup" hidden>
+        <p class="eyebrow">Private setup</p>
+        <h2>Connect your dashboard</h2>
+        <p class="supporting">Your API key stays in this browser and is sent only to the LLM Gate dashboard API.</p>
+        <form id="setup-form">
+          <label for="api-key">API key</label>
+          <input id="api-key" name="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key" required />
+          <p id="setup-error" class="error" role="alert" hidden></p>
+          <button class="button primary" type="submit">Save and load dashboard</button>
+        </form>
+      </section>
+
+      <section id="dashboard-view" hidden>
+        <article class="billing-card">
+          <div class="billing-heading">
+            <div><p class="eyebrow">Jalali billing month</p><h2 id="jalali-label">—</h2></div>
+            <div class="remaining-days"><strong id="days-remaining">—</strong><span>days left</span></div>
+          </div>
+          <div class="progress" aria-label="Jalali month progress"><span id="month-progress"></span></div>
+          <p id="month-caption" class="caption">—</p>
+        </article>
+
+        <form id="range-form" class="range-form">
+          <div><label for="start-date">From</label><input id="start-date" type="date" required /></div>
+          <div><label for="end-date">To</label><input id="end-date" type="date" required /></div>
+          <button id="refresh-button" class="icon-button" type="submit" title="Refresh usage" aria-label="Refresh usage">↻</button>
+        </form>
+
+        <p id="dashboard-error" class="error dashboard-error" role="alert" hidden></p>
+
+        <section class="metrics" aria-label="Usage summary">
+          <article class="metric emphasis"><span>Spent</span><strong id="total-spend">—</strong></article>
+          <article class="metric"><span>Remaining</span><strong id="remaining-budget">—</strong></article>
+          <article class="metric"><span>Requests</span><strong id="total-requests">—</strong></article>
+          <article class="metric"><span>Daily average</span><strong id="daily-average">—</strong></article>
+        </section>
+
+        <section class="rank-card" aria-labelledby="rank-heading">
+          <div><p id="rank-heading" class="section-title">Your standing</p><p class="caption">Lower rank numbers are better.</p></div>
+          <dl>
+            <div><dt>Optimization</dt><dd id="optimization-rank">—</dd></div>
+            <div><dt>Overall</dt><dd id="overall-rank">—</dd></div>
+          </dl>
+        </section>
+
+        <section class="models" aria-labelledby="models-heading">
+          <div class="section-heading"><h2 id="models-heading" class="section-title">Most-used models</h2><span id="model-count" class="caption"></span></div>
+          <div id="model-list" class="model-list"></div>
+        </section>
+
+        <footer><span id="updated-at" class="caption"></span><button id="clear-key" class="text-button" type="button">Change API key</button></footer>
+      </section>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
