@@ -60,7 +60,7 @@ The extension service worker is the only layer that loads the stored key and cal
 
 /**
  * @typedef
- *   {{ ok: true, data: unknown, receivedAt: string }
+ *   {{ ok: true, data: unknown, receivedAt?: string }
  *   | { ok: false, error: {
  *       code: "NOT_CONFIGURED" | "INVALID_API_KEY" | "INVALID_DATE_RANGE" |
  *         "UNAUTHORIZED" | "RATE_LIMITED" | "TIMEOUT" | "NETWORK_ERROR" |
@@ -72,7 +72,7 @@ The extension service worker is the only layer that loads the stored key and cal
  */
 ```
 
-`gate/status` returns only `{ isConfigured: boolean }`. `gate/load` returns independently settled `budget`, `spend`, and `requests` results so one failed endpoint does not hide successful data from the others.
+`gate/status` returns only `{ isConfigured: boolean }`. Successful network resources include `receivedAt`; local configuration commands do not. `gate/load` returns independently settled `budget`, `spend`, and `requests` results so one failed endpoint does not hide successful data from the others.
 
 Normalized data uses camel-case names while preserving values:
 

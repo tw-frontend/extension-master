@@ -265,15 +265,15 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 **Acceptance criteria:**
 
-- [ ] Extension validation and packaging succeed with `manifest.json` at the ZIP root.
-- [ ] Packaged output excludes tests, documentation, metadata, dependencies, and all secret material while retaining required runtime modules and the icon.
-- [ ] Registry synchronization adds only the expected LLM Gate Companion entry and icon copy.
+- [x] Extension validation and packaging succeed with `manifest.json` at the ZIP root.
+- [x] Packaged output excludes tests, documentation, metadata, dependencies, and all secret material while retaining required runtime modules and the icon.
+- [x] Registry synchronization adds only the expected LLM Gate Companion entry and icon copy.
 
 **Verification:**
 
-- [ ] Run `pnpm extension:validate llm-gate-companion`.
-- [ ] Run `pnpm extension:package llm-gate-companion` and inspect with `unzip -l artifacts/llm-gate-companion-v0.1.0.zip`.
-- [ ] Run `pnpm extension:sync`, then inspect `git diff --check` and the complete repository diff.
+- [x] Run `pnpm extension:validate llm-gate-companion`.
+- [x] Run `pnpm extension:package llm-gate-companion` and inspect with `unzip -l artifacts/llm-gate-companion-v0.1.0.zip`.
+- [x] Run `pnpm extension:sync`, then inspect `git diff --check` and the complete repository diff.
 
 **Dependencies:** Task 9
 
@@ -287,9 +287,9 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 ## Final Checkpoint: `gate-data` ready for review
 
-- [ ] All ten tasks and both intermediate checkpoints are complete.
-- [ ] All focused and full tests pass at the required coverage level.
-- [ ] Syntax, extension validation, packaging, ZIP inspection, and registry synchronization pass.
-- [ ] No live API call was made and no real key/cookie appears anywhere in the diff or artifact.
-- [ ] Every `gate-data` success criterion is demonstrated by a test or packaging check.
+- [x] All ten tasks and both intermediate checkpoints are complete.
+- [x] All focused and full tests pass at the required coverage level.
+- [x] Syntax, extension validation, packaging, ZIP inspection, and registry synchronization pass.
+- [x] No live API call was made and no real key/cookie appears anywhere in the diff or artifact.
+- [x] Every `gate-data` success criterion is demonstrated by a test or packaging check.
 - [ ] Human reviews the completed module before specification begins for the next capability-map module.

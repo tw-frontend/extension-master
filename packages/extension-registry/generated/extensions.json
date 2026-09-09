@@ -1,5 +1,52 @@
 [
   {
+    "id": "llm-gate-companion",
+    "name": "LLM Gate Companion",
+    "shortDescription": "Track private LLM Gate budget and usage with local-only API-key storage.",
+    "description": "A personal Chromium extension for viewing Simra LLM Gate budget and date-ranged usage analytics. The API key stays in local extension storage and is used only for direct, credential-free requests to the configured Simra dashboard endpoints. This first module provides the validated data boundary; Jalali billing insights, dashboard presentation and OpenRouter recommendations follow in later capability modules.",
+    "version": "0.1.0",
+    "status": "wip",
+    "icon": "icons/icon-128.png",
+    "browserSupport": [
+      "chrome",
+      "edge",
+      "brave"
+    ],
+    "categories": [
+      "ai",
+      "developer-tools",
+      "productivity"
+    ],
+    "repositoryPath": "extensions/llm-gate-companion",
+    "screenshots": [],
+    "features": [
+      "Local API-key configuration without cookie access",
+      "Validated remaining-budget requests",
+      "Validated date-ranged spend and request analytics",
+      "Partial results when an individual dashboard endpoint fails"
+    ],
+    "installInstructions": [
+      "Load the unpacked extension during development.",
+      "Open the extension after the dashboard UI module is available.",
+      "Configure a newly rotated Simra LLM Gate API key in the extension UI."
+    ],
+    "permissions": [
+      "storage"
+    ],
+    "hostPermissions": [
+      "https://llm.simra.cloud/*"
+    ],
+    "build": {
+      "outputDir": ".",
+      "exclude": [
+        "tests",
+        "README.md",
+        "package.json"
+      ]
+    },
+    "iconUrl": "/extensions/llm-gate-companion/icon.png"
+  },
+  {
     "id": "openrouter-deals",
     "name": "OpenRouter Daily Deals",
     "shortDescription": "Daily OpenRouter model deals plus five developer picks with live pricing, discounts and provider speed.",
