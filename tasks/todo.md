@@ -44,14 +44,14 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 **Acceptance criteria:**
 
-- [ ] Result helpers produce only the documented stable error codes, message, retryability, and optional HTTP status.
-- [ ] Key storage trims input, rejects empty/invalid values, supports replacement and removal, and returns the key only through its internal client-facing method.
-- [ ] Tests prove public status and all errors omit the saved key.
+- [x] Result helpers produce only the documented stable error codes, message, retryability, and optional HTTP status.
+- [x] Key storage trims input, rejects empty/invalid values, supports replacement and removal, and returns the key only through its internal client-facing method.
+- [x] Tests prove public status and all errors omit the saved key.
 
 **Verification:**
 
-- [ ] Run `pnpm --filter llm-gate-companion test -- tests/gate-result.test.js tests/gate-key-store.test.js`.
-- [ ] Run `pnpm --filter llm-gate-companion check`.
+- [x] Run the focused result and key-store tests.
+- [x] Run `pnpm --filter llm-gate-companion check`.
 
 **Dependencies:** Task 1
 
