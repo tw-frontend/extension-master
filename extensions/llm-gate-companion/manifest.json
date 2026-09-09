@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "LLM Gate Companion",
+  "version": "0.1.0",
+  "description": "Private LLM Gate budget and usage data for your browser.",
+  "minimum_chrome_version": "120",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://llm.simra.cloud/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "LLM Gate Companion",
+    "default_icon": {
+      "128": "icons/icon-128.png"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
