@@ -103,14 +103,14 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 **Acceptance criteria:**
 
-- [ ] Valid dates and same-day inclusive ranges succeed unchanged.
-- [ ] Missing, malformed, or impossible dates and `startDate > endDate` return `INVALID_DATE_RANGE`.
-- [ ] The validator is pure and has complete branch coverage.
+- [x] Valid dates and same-day inclusive ranges succeed unchanged.
+- [x] Missing, malformed, or impossible dates and `startDate > endDate` return `INVALID_DATE_RANGE`.
+- [x] The validator is pure and has complete branch coverage.
 
 **Verification:**
 
-- [ ] Run `pnpm --filter llm-gate-companion test -- tests/gate-date-range.test.js`.
-- [ ] Run `node --experimental-test-coverage --test extensions/llm-gate-companion/tests/gate-date-range.test.js` and inspect 100% branch coverage for `date-range.js`.
+- [x] Run the focused date-range tests.
+- [x] Run `node --experimental-test-coverage --test extensions/llm-gate-companion/tests/gate-date-range.test.js` and inspect 100% branch coverage for `date-range.js`.
 
 **Dependencies:** Task 2
 
