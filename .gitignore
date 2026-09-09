@@ -1,0 +1,21 @@
+node_modules
+.next
+dist
+out
+.turbo
+*.tsbuildinfo
+
+# local artifacts (zips) — keep the folder via .gitkeep
+artifacts/*
+!artifacts/.gitkeep
+
+# generated icon copies for the web app (snapshot IS committed — CI checks staleness)
+apps/web/public/extensions/
+
+# environment
+.env
+.env.local
+.env.*.local
+
+# OS / editor
+.DS_Store

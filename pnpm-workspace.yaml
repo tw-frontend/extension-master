@@ -1,0 +1,4 @@
+packages:
+  - "apps/*"
+  - "extensions/*"
+  - "packages/*"

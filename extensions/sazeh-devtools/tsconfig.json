@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2020",
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["chrome", "vite/client"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts", "manifest.config.ts"]
+}

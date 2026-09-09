@@ -1,0 +1,36 @@
+{
+  "id": "openrouter-deals",
+  "name": "OpenRouter Daily Deals",
+  "shortDescription": "Daily OpenRouter model deals plus five developer picks with live pricing, discounts and provider speed.",
+  "description": "A dependency-free Chrome extension (MV3) that inspects the OpenRouter catalog and surfaces daily deals alongside five computed developer picks: two planning models, three coding models and one separate premium model. It ranks candidates using live prices, active discounts, provider speed (TTFT/throughput), recency within each model series and your GLM → DeepSeek → Gemini → MiMo preference order. Every card shows per-million-token input/output prices, the cost for your selected request size, the provider, discount percentage, time to first token and throughput, with a Nitro recommendation when the faster provider is worth the premium. Everything runs locally: host access is limited to openrouter.ai, settings live in chrome.storage.local and no inference requests are ever sent.",
+  "version": "1.1.0",
+  "status": "stable",
+  "icon": "icons/icon-128.png",
+  "browserSupport": ["chrome", "edge", "brave"],
+  "categories": ["ai", "developer-tools"],
+  "repositoryPath": "extensions/openrouter-deals",
+  "screenshots": [],
+  "features": [
+    "Developer picks: 2 planning + 3 coding models plus a separate premium choice",
+    "Daily deals view with stronger priority for discounted preferred families",
+    "Live provider quotes: input/output prices, discount percentage, per-request cost",
+    "Provider speed via the OpenRouter endpoints API with a public provider-table fallback",
+    "Nitro guidance: when the fastest provider is worth the price premium",
+    "Editorial capability tiers per model family with a recency filter per series",
+    "Copy the exact model ID and open the model page in one click",
+    "Incremental background scanning with alarms, backoff and six-hour refresh",
+    "No API key, no analytics, no remote scripts"
+  ],
+  "installInstructions": [
+    "Download the ZIP and extract it.",
+    "Open chrome://extensions and enable Developer mode.",
+    "Click Load unpacked and select the extracted folder (the one containing manifest.json).",
+    "Open the popup — Developer picks is the default tab; the first full scan takes ~12 minutes and refreshes every six hours while Chrome runs."
+  ],
+  "permissions": ["storage", "alarms"],
+  "hostPermissions": ["https://openrouter.ai/*"],
+  "build": {
+    "outputDir": ".",
+    "exclude": ["tests", "README.md", "package.json"]
+  }
+}

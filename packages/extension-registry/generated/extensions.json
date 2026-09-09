@@ -1,0 +1,102 @@
+[
+  {
+    "id": "openrouter-deals",
+    "name": "OpenRouter Daily Deals",
+    "shortDescription": "Daily OpenRouter model deals plus five developer picks with live pricing, discounts and provider speed.",
+    "description": "A dependency-free Chrome extension (MV3) that inspects the OpenRouter catalog and surfaces daily deals alongside five computed developer picks: two planning models, three coding models and one separate premium model. It ranks candidates using live prices, active discounts, provider speed (TTFT/throughput), recency within each model series and your GLM → DeepSeek → Gemini → MiMo preference order. Every card shows per-million-token input/output prices, the cost for your selected request size, the provider, discount percentage, time to first token and throughput, with a Nitro recommendation when the faster provider is worth the premium. Everything runs locally: host access is limited to openrouter.ai, settings live in chrome.storage.local and no inference requests are ever sent.",
+    "version": "1.1.0",
+    "status": "stable",
+    "icon": "icons/icon-128.png",
+    "browserSupport": [
+      "chrome",
+      "edge",
+      "brave"
+    ],
+    "categories": [
+      "ai",
+      "developer-tools"
+    ],
+    "repositoryPath": "extensions/openrouter-deals",
+    "screenshots": [],
+    "features": [
+      "Developer picks: 2 planning + 3 coding models plus a separate premium choice",
+      "Daily deals view with stronger priority for discounted preferred families",
+      "Live provider quotes: input/output prices, discount percentage, per-request cost",
+      "Provider speed via the OpenRouter endpoints API with a public provider-table fallback",
+      "Nitro guidance: when the fastest provider is worth the price premium",
+      "Editorial capability tiers per model family with a recency filter per series",
+      "Copy the exact model ID and open the model page in one click",
+      "Incremental background scanning with alarms, backoff and six-hour refresh",
+      "No API key, no analytics, no remote scripts"
+    ],
+    "installInstructions": [
+      "Download the ZIP and extract it.",
+      "Open chrome://extensions and enable Developer mode.",
+      "Click Load unpacked and select the extracted folder (the one containing manifest.json).",
+      "Open the popup — Developer picks is the default tab; the first full scan takes ~12 minutes and refreshes every six hours while Chrome runs."
+    ],
+    "permissions": [
+      "storage",
+      "alarms"
+    ],
+    "hostPermissions": [
+      "https://openrouter.ai/*"
+    ],
+    "build": {
+      "outputDir": ".",
+      "exclude": [
+        "tests",
+        "README.md",
+        "package.json"
+      ]
+    },
+    "iconUrl": "/extensions/openrouter-deals/icon.png"
+  },
+  {
+    "id": "sazeh-devtools",
+    "name": "Sazeh DevTools",
+    "shortDescription": "Inspect and override Sazeh runtime config cached in localStorage — a typed editor instead of hand-editing JSON.",
+    "description": "Sazeh UI apps fetch remote config and cache it in the page's localStorage under tw-sazeh-<client>-<version>. The service reads that cache once at startup, so trying different config values normally means hand-editing localStorage and reloading. This Chrome extension (MV3, built with Vite + CRXJS + React) turns that into a typed popup editor: it finds every tw-sazeh-* entry in the active tab, unwraps the stale-while-revalidate envelope, and renders fields from a published JSON Schema descriptor when available — or infers them from the live value's runtime types otherwise. Save & Reload writes your edits and pins the override against background revalidation; Reset removes the key so the app fetches fresh config. No remote permissions: it only uses activeTab + scripting, granted when you click the toolbar icon.",
+    "version": "0.1.2",
+    "status": "beta",
+    "icon": "public/logo.png",
+    "browserSupport": [
+      "chrome",
+      "edge",
+      "brave"
+    ],
+    "categories": [
+      "developer-tools"
+    ],
+    "repositoryPath": "extensions/sazeh-devtools",
+    "screenshots": [],
+    "features": [
+      "Detects every tw-sazeh-* config entry in the active tab",
+      "Unwraps the stale-while-revalidate envelope ({ value, staleAt, ttl })",
+      "Schema-driven typed editor when the app publishes a JSON Schema descriptor",
+      "Runtime type inference fallback (boolean → toggle, number → input, string[] → list, …)",
+      "Save & Reload pins the override by pushing staleAt ~1 year ahead",
+      "Optional 'Keep override' toggle to write without pinning",
+      "Reset removes the key so the app fetches fresh config on next load",
+      "Zero host permissions — activeTab + scripting only"
+    ],
+    "installInstructions": [
+      "Download the ZIP and extract it.",
+      "Open chrome://extensions and enable Developer mode.",
+      "Click Load unpacked and select the extracted build folder (contains manifest.json).",
+      "Open a page where Sazeh has run, click the extension icon, edit, then Save & Reload."
+    ],
+    "permissions": [
+      "scripting",
+      "activeTab",
+      "tabs"
+    ],
+    "hostPermissions": [],
+    "build": {
+      "outputDir": "dist",
+      "command": "build",
+      "exclude": []
+    },
+    "iconUrl": "/extensions/sazeh-devtools/icon.png"
+  }
+]

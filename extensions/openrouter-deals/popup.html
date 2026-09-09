@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenRouter Daily Deals</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <span class="eyebrow">OPENROUTER / DAILY DEALS</span>
+        <h1>A good day to save.</h1>
+      </div>
+      <button id="refresh" title="Fetch a new catalog and rescan providers">
+        ↻ Refresh
+      </button>
+    </header>
+    <div class="dateline">
+      <span id="date"></span><span class="live">PUBLIC API</span>
+    </div>
+    <p id="status" role="status" aria-live="polite">Loading today’s prices…</p>
+    <main>
+      <nav class="tabs" aria-label="Recommendation views">
+        <button id="show-picks" aria-pressed="true">Developer picks</button>
+        <button id="show-deals" aria-pressed="false">Daily deals</button>
+      </nav>
+      <section id="developer-view">
+        <div class="section-title"><h2>Five models for your workflow</h2><span id="pick-count"></span></div>
+        <p class="muted">Two for planning · three for coding. Latest or one version back, within the top 200 by weekly popularity.</p>
+        <p id="picks-status" role="status" class="muted"></p>
+        <div id="developer-list"></div>
+        <div class="section-title"><h2>For critical, limited tasks</h2></div>
+        <div id="premium-pick"></div>
+        <details><summary>How these recommendations work</summary>
+          <p>Capability tiers are editorial family-level estimates, reviewed September 8, 2026—not benchmark scores. Planning requires a higher tier; coding targets routine implementation. Unknown model families are left unrated. New versions inherit their family's estimate.</p>
+          <p>Within each role, we compare estimated request cost, capability tier, measured speed, your family preferences and active discounts. Each series appears once. The premium choice favors a higher capability tier and must cost more than every everyday pick; it is not a guaranteed universal best.</p>
+          <p>Nitro sorts eligible providers by output throughput. It does not increase intelligence or necessarily reduce startup latency. Compare the shown provider and price before switching; use latency routing for faster first tokens.</p>
+          <p>Speed comes from public API metrics, with public provider-table fallback. Missing or ambiguous measurements stay unavailable. All speed figures are rolling medians, not guarantees.</p>
+        </details>
+      </section>
+      <section id="deals-view" hidden>
+      <section class="hero" aria-labelledby="pick-label">
+        <span class="eyebrow" id="pick-label">YOUR BEST PICK RIGHT NOW</span>
+        <div id="best">
+          <p>Your recommendation will appear as prices arrive.</p>
+        </div>
+      </section>
+      <div class="section-title">
+        <h2>Deals worth a look</h2>
+        <span id="count"></span>
+      </div>
+      <ol id="deals"></ol>
+      <p id="empty" class="muted"></p>
+      </section>
+      <details>
+        <summary>Your preferences & price estimate</summary>
+        <p class="preference">01 GLM → 02 DeepSeek → 03 Gemini → 04 MiMo</p>
+        <p>
+          Discounted favorites lead, in this order. Otherwise, lowest estimated
+          cost wins; favorites break ties.
+        </p>
+        <form id="settings">
+          <div class="fields">
+            <label
+              >Input tokens / request<input
+                id="input"
+                type="number"
+                min="1"
+                max="10000000"
+                step="1"
+                required /></label
+            ><label
+              >Output tokens / request<input
+                id="output"
+                type="number"
+                min="1"
+                max="10000000"
+                step="1"
+                required
+            /></label>
+          </div>
+          <label class="check"
+            ><input id="free" type="checkbox" /> Include free models</label
+          ><button type="submit">Save preferences</button
+          ><span id="saved" role="status"></span>
+        </form>
+      </details>
+    </main>
+    <footer>
+      USD prices for uncached text. Provider availability, account routing,
+      reasoning and other usage charges can affect your bill. Free models may
+      have tighter limits. Offers can end between checks.
+    </footer>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

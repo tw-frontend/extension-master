@@ -1,0 +1,29 @@
+{
+  "name": "extensions-hub",
+  "private": true,
+  "packageManager": "pnpm@10.6.3",
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "extension:list": "tsx scripts/extension-cli.ts list",
+    "extension:validate": "tsx scripts/extension-cli.ts validate",
+    "extension:build": "tsx scripts/extension-cli.ts build",
+    "extension:package": "tsx scripts/extension-cli.ts package",
+    "extension:sync": "tsx scripts/extension-cli.ts sync"
+  },
+  "devDependencies": {
+    "@extensions-hub/extension-registry": "workspace:*",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "zod": "^3.24.2"
+  }
+}

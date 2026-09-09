@@ -1,0 +1,36 @@
+{
+  "id": "sazeh-devtools",
+  "name": "Sazeh DevTools",
+  "shortDescription": "Inspect and override Sazeh runtime config cached in localStorage — a typed editor instead of hand-editing JSON.",
+  "description": "Sazeh UI apps fetch remote config and cache it in the page's localStorage under tw-sazeh-<client>-<version>. The service reads that cache once at startup, so trying different config values normally means hand-editing localStorage and reloading. This Chrome extension (MV3, built with Vite + CRXJS + React) turns that into a typed popup editor: it finds every tw-sazeh-* entry in the active tab, unwraps the stale-while-revalidate envelope, and renders fields from a published JSON Schema descriptor when available — or infers them from the live value's runtime types otherwise. Save & Reload writes your edits and pins the override against background revalidation; Reset removes the key so the app fetches fresh config. No remote permissions: it only uses activeTab + scripting, granted when you click the toolbar icon.",
+  "version": "0.1.2",
+  "status": "beta",
+  "icon": "public/logo.png",
+  "browserSupport": ["chrome", "edge", "brave"],
+  "categories": ["developer-tools"],
+  "repositoryPath": "extensions/sazeh-devtools",
+  "screenshots": [],
+  "features": [
+    "Detects every tw-sazeh-* config entry in the active tab",
+    "Unwraps the stale-while-revalidate envelope ({ value, staleAt, ttl })",
+    "Schema-driven typed editor when the app publishes a JSON Schema descriptor",
+    "Runtime type inference fallback (boolean → toggle, number → input, string[] → list, …)",
+    "Save & Reload pins the override by pushing staleAt ~1 year ahead",
+    "Optional 'Keep override' toggle to write without pinning",
+    "Reset removes the key so the app fetches fresh config on next load",
+    "Zero host permissions — activeTab + scripting only"
+  ],
+  "installInstructions": [
+    "Download the ZIP and extract it.",
+    "Open chrome://extensions and enable Developer mode.",
+    "Click Load unpacked and select the extracted build folder (contains manifest.json).",
+    "Open a page where Sazeh has run, click the extension icon, edit, then Save & Reload."
+  ],
+  "permissions": ["scripting", "activeTab", "tabs"],
+  "hostPermissions": [],
+  "build": {
+    "outputDir": "dist",
+    "command": "build",
+    "exclude": []
+  }
+}

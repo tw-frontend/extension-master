@@ -1,0 +1,10 @@
+{
+  "name": "openrouter-daily-deals",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/pricing.test.js && node tests/background.test.js && node tests/developer-picks.test.js",
+    "check": "node --check background.js && node --check popup.js && node --check pricing.js && node --check developer-picks.js"
+  }
+}

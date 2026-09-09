@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, typecheck, test, build web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (where defined)
+        run: pnpm -r --if-present lint
+
+      - name: Typecheck
+        run: pnpm -r --if-present typecheck
+
+      - name: Tests (per extension)
+        run: pnpm -r --if-present test
+
+      - name: Validate extension registry
+        run: pnpm extension:validate
+
+      - name: Sync registry snapshot (fail if out of date)
+        run: |
+          pnpm extension:sync
+          git diff --exit-code -- packages/extension-registry/generated \
+            || { echo "::error::generated/extensions.json is stale — run 'pnpm extension:sync' and commit"; exit 1; }
+
+      - name: Build dashboard
+        run: pnpm --filter web build
+
+  extensions:
+    name: Build & package extensions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate extension metadata + version consistency
+        run: pnpm extension:validate
+
+      - name: Build and package every extension
+        run: |
+          set -euo pipefail
+          ids=$(node -e '
+            const fs = require("fs");
+            for (const d of fs.readdirSync("extensions", { withFileTypes: true })) {
+              if (d.isDirectory()) console.log(d.name);
+            }
+          ')
+          for id in $ids; do
+            echo "::group::package $id"
+            pnpm extension:package "$id"
+            echo "::endgroup::"
+          done
+
+      - name: Verify ZIP artifacts
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for zip in artifacts/*.zip; do
+            echo "verifying $zip"
+            if ! unzip -l "$zip" | grep -q " manifest.json$"; then
+              echo "::error::$zip has no manifest.json at its root"; exit 1
+            fi
+            if unzip -l "$zip" | grep -qE "(^|[[:space:]])dist/manifest\.json$"; then
+              echo "::error::$zip nests manifest.json under dist/ — ZIP root must contain it"; exit 1
+            fi
+          done

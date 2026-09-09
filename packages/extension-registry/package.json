@@ -1,0 +1,22 @@
+{
+  "name": "@extensions-hub/extension-registry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "types": "./src/registry.ts",
+  "exports": {
+    ".": "./src/registry.ts",
+    "./schema": "./src/schema.ts",
+    "./fs": "./src/fs.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5.7.3"
+  }
+}

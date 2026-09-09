@@ -1,0 +1,103 @@
+name: Extensions Release
+
+# On main, build and release every extension whose files (or shared deps) changed.
+# One GitHub Release per extension, tagged `<extension-id>-v<version>`.
+# The ZIP asset `<extension-id>-v<version>.zip` is what the dashboard links to.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: extensions-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      extensions: ${{ steps.detect.outputs.extensions }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: detect
+        name: Detect changed extensions
+        run: |
+          set -euo pipefail
+          base="${{ github.event.before || format('refs/heads/{0}', github.event.repository.default_branch) }}"
+          if ! git rev-parse --verify -q "$base" >/dev/null; then base="HEAD~1"; fi
+          changed="$(git diff --name-only "$base" HEAD || true)"
+          echo "Changed files:"
+          echo "$changed" | sed 's/^/  /'
+          extensions="$(node scripts/detect-changed-extensions.mjs "$changed")"
+          echo "extensions=${extensions}" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: detect
+    if: needs.detect.outputs.extensions != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required to create releases; scoped to this job only
+    strategy:
+      fail-fast: false
+      matrix:
+        extension: ${{ fromJson(needs.detect.outputs.extensions) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate extension
+        run: pnpm extension:validate
+
+      - name: Build + package + checksum
+        run: pnpm extension:package ${{ matrix.extension }}
+
+      - name: Determine version and tag
+        id: meta
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./extensions/${{ matrix.extension }}/package.json').version")"
+          tag="${{ matrix.extension }}-v${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "zip=artifacts/${{ matrix.extension }}-v${version}.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Guard against overwriting an existing release
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          if git ls-remote --tags origin "refs/tags/${tag}" | grep -q "${tag}"; then
+            echo "::error::Release ${tag} already exists but source changed."
+            echo "::error::Releases are immutable — bump the version of '${{ matrix.extension }}' in extensions/${{ matrix.extension }}/package.json (and extension.config.json) and merge again."
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          sha256="$(sha256sum "${{ steps.meta.outputs.zip }}" | cut -d' ' -f1)"
+          gh release create "${{ steps.meta.outputs.tag }}" \
+            --title "${{ matrix.extension }} v${{ steps.meta.outputs.version }}" \
+            --notes "Automated release for \`${{ matrix.extension }}\`.
+
+          - Version: \`${{ steps.meta.outputs.version }}\`
+          - Commit: ${{ github.sha }}
+          - SHA-256: \`${sha256}\`
+
+          Extract the ZIP and load the folder via chrome://extensions → Developer mode → Load unpacked." \
+            "${{ steps.meta.outputs.zip }}"

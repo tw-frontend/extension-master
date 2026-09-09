@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/* Design tokens — dark is the default theme; .light overrides on <html>. */
+:root {
+  --bg: #0a0d13;
+  --bg-soft: #0e121a;
+  --surface: #10141d;
+  --surface-2: #151a25;
+  --border: #222836;
+  --border-strong: #303849;
+  --text: #e7eaf2;
+  --text-muted: #8d95a8;
+  --text-faint: #5d6577;
+  --accent: #2dd4bf;
+  --accent-soft: rgba(45, 212, 191, 0.12);
+  --accent-contrast: #062b26;
+  --danger: #f87171;
+}
+
+.light {
+  --bg: #fafafa;
+  --bg-soft: #f4f4f5;
+  --surface: #ffffff;
+  --surface-2: #f7f7f8;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --text: #18181b;
+  --text-muted: #52525b;
+  --text-faint: #a1a1aa;
+  --accent: #0d9488;
+  --accent-soft: rgba(13, 148, 136, 0.1);
+  --accent-contrast: #ffffff;
+  --danger: #dc2626;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-background-soft: var(--bg-soft);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-danger: var(--danger);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+html.light {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Subtle developer-flavored backdrop: fine grid + soft corner glow. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    radial-gradient(60rem 40rem at 85% -10%, var(--accent-soft), transparent 60%),
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    56px 56px,
+    56px 56px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* Focus visibility for keyboard users */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
