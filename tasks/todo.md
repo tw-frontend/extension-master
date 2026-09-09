@@ -127,14 +127,14 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 **Acceptance criteria:**
 
-- [ ] Budget requests use an encoded `api_key`, `credentials: "omit"`, `cache: "no-store"`, JSON acceptance, and a 10-second timeout without logging the URL.
-- [ ] Valid budget fixtures normalize to `{ remainingBudget }`; malformed JSON/data and all documented transport/HTTP failures return stable redacted results.
-- [ ] Missing configuration causes zero fetch calls.
+- [x] Budget requests use an encoded `api_key`, `credentials: "omit"`, `cache: "no-store"`, JSON acceptance, and a 10-second timeout without logging the URL.
+- [x] Valid budget fixtures normalize to `{ remainingBudget }`; malformed JSON/data and all documented transport/HTTP failures return stable redacted results.
+- [x] Missing configuration causes zero fetch calls.
 
 **Verification:**
 
-- [ ] Run `pnpm --filter llm-gate-companion test -- tests/gate-client.test.js tests/gate-contracts.test.js tests/background.test.js`.
-- [ ] Run `pnpm --filter llm-gate-companion check`.
+- [x] Run the focused client, contract, and background tests.
+- [x] Run `pnpm --filter llm-gate-companion check`.
 
 **Dependencies:** Tasks 3 and 4
 

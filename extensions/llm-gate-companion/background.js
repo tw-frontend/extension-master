@@ -1,9 +1,11 @@
+import { createGateClient } from "./src/gate/client.js";
+import { validateDateRange } from "./src/gate/date-range.js";
 import { createKeyStore } from "./src/gate/key-store.js";
-import { failure } from "./src/gate/result.js";
+import { failure, success } from "./src/gate/result.js";
 
 const COMMAND_ERROR = "The gate command could not be completed.";
 
-export function createCommandHandler(keyStore) {
+export function createCommandHandler(keyStore, gateClient) {
   return async function handleCommand(command) {
     if (!command || typeof command !== "object") {
       return failure("UPSTREAM_ERROR", COMMAND_ERROR, false);
@@ -16,6 +18,18 @@ export function createCommandHandler(keyStore) {
         return keyStore.status();
       case "gate/clear":
         return keyStore.clear();
+      case "gate/load": {
+        const range = validateDateRange(command.range);
+        if (!range.ok) {
+          return range;
+        }
+        const configured = await keyStore.load();
+        if (!configured.ok) {
+          return configured;
+        }
+        const budget = await gateClient.getBudget(configured.data.apiKey);
+        return success({ budget });
+      }
       default:
         return failure("UPSTREAM_ERROR", COMMAND_ERROR, false);
     }
@@ -36,6 +50,7 @@ export function createMessageListener(handleCommand) {
 if (globalThis.chrome?.runtime?.onMessage && globalThis.chrome?.storage?.local) {
   const handleCommand = createCommandHandler(
     createKeyStore(globalThis.chrome.storage.local),
+    createGateClient(),
   );
   globalThis.chrome.runtime.onMessage.addListener(
     createMessageListener(handleCommand),

@@ -97,3 +97,69 @@ test("unexpected command failures return a generic redacted result", async () =>
   assert.equal(result.error.code, "UPSTREAM_ERROR");
   assert.doesNotMatch(JSON.stringify(result), new RegExp(secret));
 });
+
+test("load returns a validated budget without exposing the configured key", async () => {
+  let loadedKey;
+  const keyStore = createKeyStore(fakeStorage());
+  const handle = createCommandHandler(keyStore, {
+    async getBudget(apiKey) {
+      loadedKey = apiKey;
+      return {
+        ok: true,
+        data: { remainingBudget: 7.5 },
+        receivedAt: "2026-09-09T10:00:00.000Z",
+      };
+    },
+  });
+  await handle({ type: "gate/configure", apiKey: "private-test-key" });
+
+  const result = await handle({
+    type: "gate/load",
+    range: { startDate: "2026-09-02", endDate: "2026-09-09" },
+  });
+
+  assert.equal(loadedKey, "private-test-key");
+  assert.deepEqual(result, {
+    ok: true,
+    data: {
+      budget: {
+        ok: true,
+        data: { remainingBudget: 7.5 },
+        receivedAt: "2026-09-09T10:00:00.000Z",
+      },
+    },
+  });
+  assert.doesNotMatch(JSON.stringify(result), /private-test-key/);
+});
+
+test("load without configuration or with invalid dates makes no client calls", async () => {
+  let calls = 0;
+  const keyStore = createKeyStore(fakeStorage());
+  const handle = createCommandHandler(keyStore, {
+    async getBudget() {
+      calls += 1;
+      return { ok: true, data: { remainingBudget: 1 } };
+    },
+  });
+
+  assert.equal(
+    (
+      await handle({
+        type: "gate/load",
+        range: { startDate: "2026-09-02", endDate: "2026-09-09" },
+      })
+    ).error.code,
+    "NOT_CONFIGURED",
+  );
+  await handle({ type: "gate/configure", apiKey: "test-key" });
+  assert.equal(
+    (
+      await handle({
+        type: "gate/load",
+        range: { startDate: "2026-09-10", endDate: "2026-09-09" },
+      })
+    ).error.code,
+    "INVALID_DATE_RANGE",
+  );
+  assert.equal(calls, 0);
+});
