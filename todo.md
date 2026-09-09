@@ -15,10 +15,10 @@ Later phases are opt-in; do them when they pay off.
 
 ## Phase 2 — Extension migration ✅
 
-- [x] Migrate `openrouter-deals` from `~/Projects/openrouter-crawler`
+- [x] Migrate `openrouter-deals` from its previous standalone repository
   (vanilla MV3, source == build output, tests kept under `tests/`)
-- [x] Migrate `sazeh-devtools` from `~/Projects/telewebion/packages/sazeh-devtools`
-  (Vite + CRXJS; inlined the telewebion `typescript-config` workspace dependency)
+- [x] Migrate `sazeh-devtools` from its previous monorepo package
+  (Vite + CRXJS; inlined the former workspace `typescript-config` dependency)
 - [x] `extension.config.json` for both (id, version, status, browsers, features, permissions, build)
 - [x] Per-extension `README.md` preserved
 

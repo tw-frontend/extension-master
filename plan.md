@@ -157,8 +157,8 @@ Release asset: `<id>-v<version>.zip` with production files at the ZIP root
 
 | Extension | Source | Status | Notes |
 | --- | --- | --- | --- |
-| OpenRouter Daily Deals (`openrouter-deals`) | `~/Projects/openrouter-crawler` | migrated, stable | vanilla MV3, source == build, own tests (`npm test`, `npm run check`) |
-| Sazeh DevTools (`sazeh-devtools`) | `~/Projects/telewebion/packages/sazeh-devtools` | migrated, beta | Vite + CRXJS + React 19; workspace `typescript-config` dependency inlined into its `tsconfig.json` |
+| OpenRouter Daily Deals (`openrouter-deals`) | Previous standalone repository | migrated, stable | vanilla MV3, source == build, own tests (`npm test`, `npm run check`) |
+| Sazeh DevTools (`sazeh-devtools`) | Previous monorepo package | migrated, beta | Vite + CRXJS + React 19; workspace `typescript-config` dependency inlined into its `tsconfig.json` |
 
 ## 9. Convention documents
 

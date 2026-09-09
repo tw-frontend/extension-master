@@ -21,8 +21,8 @@ and stray screenshots.
 
 ```bash
 # example used for openrouter-deals
-cp ~/Projects/openrouter-crawler/{manifest.json,background.js,popup.*,pricing.js,developer-picks.js,package.json,README.md} extensions/openrouter-deals/
-cp -r ~/Projects/openrouter-crawler/{icons,tests} extensions/openrouter-deals/
+cp <source-repo>/{manifest.json,background.js,popup.*,pricing.js,developer-picks.js,package.json,README.md} extensions/openrouter-deals/
+cp -r <source-repo>/{icons,tests} extensions/openrouter-deals/
 ```
 
 ### 2. Normalize `package.json`
