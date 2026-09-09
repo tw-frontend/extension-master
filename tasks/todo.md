@@ -70,14 +70,14 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 **Acceptance criteria:**
 
-- [ ] `gate/configure`, `gate/status`, and `gate/clear` work through the background command handler and always respond exactly once.
-- [ ] Unknown/malformed commands fail predictably without mutating storage.
-- [ ] Neither responses nor thrown/error paths contain the configured key.
+- [x] `gate/configure`, `gate/status`, and `gate/clear` work through the background command handler and always respond exactly once.
+- [x] Unknown/malformed commands fail predictably without mutating storage.
+- [x] Neither responses nor thrown/error paths contain the configured key.
 
 **Verification:**
 
-- [ ] Run `pnpm --filter llm-gate-companion test -- tests/background.test.js`.
-- [ ] Run `pnpm --filter llm-gate-companion check`.
+- [x] Run the focused background tests.
+- [x] Run `pnpm --filter llm-gate-companion check`.
 
 **Dependencies:** Task 2
 
@@ -90,10 +90,10 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 ## Checkpoint 1: Secret boundary
 
-- [ ] Run `pnpm --filter llm-gate-companion test`.
-- [ ] Run `pnpm extension:validate llm-gate-companion`.
-- [ ] Confirm no popup-facing command returns the key and no permission beyond `storage` plus the Simra host is present.
-- [ ] Stop and repair any secret leak before proceeding.
+- [x] Run `pnpm --filter llm-gate-companion test`.
+- [x] Run `pnpm extension:validate llm-gate-companion`.
+- [x] Confirm no popup-facing command returns the key and no permission beyond `storage` plus the Simra host is present.
+- [x] Stop and repair any secret leak before proceeding.
 
 ## Phase 2: Validated endpoint paths
 
