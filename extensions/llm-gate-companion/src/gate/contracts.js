@@ -73,3 +73,60 @@ export function parseSpendResponse(body) {
     })),
   });
 }
+
+function isRequestsOverTimeRow(row) {
+  return (
+    row &&
+    typeof row === "object" &&
+    isValidDate(row.date) &&
+    isFiniteNumber(row.count)
+  );
+}
+
+function isRequestsByModelRow(row) {
+  return (
+    row &&
+    typeof row === "object" &&
+    typeof row.model === "string" &&
+    row.model.trim() !== "" &&
+    isFiniteNumber(row.count)
+  );
+}
+
+export function parseRequestsResponse(body) {
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !isFiniteNumber(body.total_requests) ||
+    !Array.isArray(body.requests_over_time) ||
+    !body.requests_over_time.every(isRequestsOverTimeRow) ||
+    !Array.isArray(body.requests_by_model) ||
+    !body.requests_by_model.every(isRequestsByModelRow) ||
+    !isFiniteNumber(body.avg_spend_per_request) ||
+    !isFiniteNumber(body.rank_by_avg_spend) ||
+    !isFiniteNumber(body.rank_by_spend) ||
+    !isFiniteNumber(body.total_users) ||
+    !isFiniteNumber(body.total_users_spend) ||
+    !isFiniteNumber(body.user_rank)
+  ) {
+    return invalidResponse();
+  }
+
+  return success({
+    totalRequests: body.total_requests,
+    requestsOverTime: body.requests_over_time.map(({ date, count }) => ({
+      date,
+      count,
+    })),
+    requestsByModel: body.requests_by_model.map(({ model, count }) => ({
+      model,
+      count,
+    })),
+    averageSpendPerRequest: body.avg_spend_per_request,
+    rankByAverageSpend: body.rank_by_avg_spend,
+    rankBySpend: body.rank_by_spend,
+    totalUsers: body.total_users,
+    totalUsersSpend: body.total_users_spend,
+    userRank: body.user_rank,
+  });
+}

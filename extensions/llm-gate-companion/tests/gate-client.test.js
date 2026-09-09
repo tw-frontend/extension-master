@@ -157,3 +157,51 @@ test("spend request rejects an invalid range without fetching", async () => {
   assert.equal(result.error.code, "INVALID_DATE_RANGE");
   assert.equal(fetchCalls, 0);
 });
+
+test("requests call uses the request analytics endpoint and date range", async () => {
+  let requestedUrl;
+  const client = createGateClient({
+    fetchImpl: async (url) => {
+      requestedUrl = new URL(url);
+      return response({
+        total_requests: 0,
+        requests_over_time: [],
+        requests_by_model: [],
+        avg_spend_per_request: 0,
+        rank_by_avg_spend: 0,
+        rank_by_spend: 0,
+        total_users: 0,
+        total_users_spend: 0,
+        user_rank: 0,
+      });
+    },
+  });
+
+  const result = await client.getRequests("test-key", {
+    startDate: "2026-09-02",
+    endDate: "2026-09-09",
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(requestedUrl.pathname, "/api/dashboard/requests");
+  assert.equal(requestedUrl.searchParams.get("start_date"), "2026-09-02");
+  assert.equal(requestedUrl.searchParams.get("end_date"), "2026-09-09");
+});
+
+test("requests call rejects an invalid range without fetching", async () => {
+  let fetchCalls = 0;
+  const client = createGateClient({
+    fetchImpl: async () => {
+      fetchCalls += 1;
+      return response({});
+    },
+  });
+
+  const result = await client.getRequests("test-key", {
+    startDate: "2026-09-10",
+    endDate: "2026-09-09",
+  });
+
+  assert.equal(result.error.code, "INVALID_DATE_RANGE");
+  assert.equal(fetchCalls, 0);
+});

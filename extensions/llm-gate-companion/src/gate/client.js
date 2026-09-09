@@ -1,4 +1,8 @@
-import { parseBudgetResponse, parseSpendResponse } from "./contracts.js";
+import {
+  parseBudgetResponse,
+  parseRequestsResponse,
+  parseSpendResponse,
+} from "./contracts.js";
 import { validateDateRange } from "./date-range.js";
 import { failure, success } from "./result.js";
 
@@ -97,6 +101,17 @@ export function createGateClient({
             "/api/dashboard/spend",
             apiKey,
             parseSpendResponse,
+            validated.data,
+          )
+        : Promise.resolve(validated);
+    },
+    getRequests(apiKey, range) {
+      const validated = validateDateRange(range);
+      return validated.ok
+        ? request(
+            "/api/dashboard/requests",
+            apiKey,
+            parseRequestsResponse,
             validated.data,
           )
         : Promise.resolve(validated);

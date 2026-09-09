@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   parseBudgetResponse,
+  parseRequestsResponse,
   parseSpendResponse,
 } from "../src/gate/contracts.js";
 
@@ -92,5 +93,101 @@ test("spend response rejects malformed top-level and nested values", () => {
 
   for (const body of invalidBodies) {
     assert.equal(parseSpendResponse(body).error.code, "INVALID_RESPONSE");
+  }
+});
+
+const validRequestsBody = {
+  total_requests: 874,
+  requests_over_time: [
+    { date: "2026-09-02", count: 563 },
+    { date: "2026-09-09", count: 25 },
+  ],
+  requests_by_model: [
+    { model: "glm-5.3-flash", count: 22716 },
+    { model: "gpt-5.6-luna-pro", count: 62 },
+  ],
+  avg_spend_per_request: 0.010850737312013716,
+  rank_by_avg_spend: 29,
+  rank_by_spend: 10,
+  total_users: 34,
+  total_users_spend: 34,
+  user_rank: 20,
+};
+
+test("requests response normalizes every supplied analytics field", () => {
+  assert.deepEqual(parseRequestsResponse(validRequestsBody), {
+    ok: true,
+    data: {
+      totalRequests: 874,
+      requestsOverTime: [
+        { date: "2026-09-02", count: 563 },
+        { date: "2026-09-09", count: 25 },
+      ],
+      requestsByModel: [
+        { model: "glm-5.3-flash", count: 22716 },
+        { model: "gpt-5.6-luna-pro", count: 62 },
+      ],
+      averageSpendPerRequest: 0.010850737312013716,
+      rankByAverageSpend: 29,
+      rankBySpend: 10,
+      totalUsers: 34,
+      totalUsersSpend: 34,
+      userRank: 20,
+    },
+  });
+});
+
+test("requests response preserves upstream ordering and inconsistent counts", () => {
+  const result = parseRequestsResponse(validRequestsBody);
+
+  assert.equal(result.data.totalRequests, 874);
+  assert.equal(result.data.requestsByModel[0].count, 22716);
+  assert.deepEqual(
+    result.data.requestsByModel.map(({ model }) => model),
+    ["glm-5.3-flash", "gpt-5.6-luna-pro"],
+  );
+});
+
+test("requests response accepts empty analytics arrays", () => {
+  assert.equal(
+    parseRequestsResponse({
+      ...validRequestsBody,
+      total_requests: 0,
+      requests_over_time: [],
+      requests_by_model: [],
+    }).ok,
+    true,
+  );
+});
+
+test("requests response rejects malformed required and nested values", () => {
+  const invalidBodies = [
+    null,
+    { ...validRequestsBody, total_requests: "874" },
+    { ...validRequestsBody, avg_spend_per_request: NaN },
+    { ...validRequestsBody, rank_by_avg_spend: undefined },
+    { ...validRequestsBody, rank_by_spend: Infinity },
+    { ...validRequestsBody, total_users: "34" },
+    { ...validRequestsBody, total_users_spend: null },
+    { ...validRequestsBody, user_rank: "20" },
+    { ...validRequestsBody, requests_over_time: null },
+    { ...validRequestsBody, requests_by_model: {} },
+    {
+      ...validRequestsBody,
+      requests_over_time: [{ date: "2026-02-30", count: 1 }],
+    },
+    {
+      ...validRequestsBody,
+      requests_over_time: [{ date: "2026-09-09", count: "1" }],
+    },
+    { ...validRequestsBody, requests_by_model: [{ model: "", count: 1 }] },
+    {
+      ...validRequestsBody,
+      requests_by_model: [{ model: "test-model", count: NaN }],
+    },
+  ];
+
+  for (const body of invalidBodies) {
+    assert.equal(parseRequestsResponse(body).error.code, "INVALID_RESPONSE");
   }
 });

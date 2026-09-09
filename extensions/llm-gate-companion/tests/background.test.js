@@ -127,6 +127,28 @@ test("load returns a validated budget without exposing the configured key", asyn
         receivedAt: "2026-09-09T10:00:00.000Z",
       };
     },
+    async getRequests(apiKey, range) {
+      assert.equal(apiKey, "private-test-key");
+      assert.deepEqual(range, {
+        startDate: "2026-09-02",
+        endDate: "2026-09-09",
+      });
+      return {
+        ok: true,
+        data: {
+          totalRequests: 874,
+          requestsOverTime: [],
+          requestsByModel: [],
+          averageSpendPerRequest: 0.01,
+          rankByAverageSpend: 29,
+          rankBySpend: 10,
+          totalUsers: 34,
+          totalUsersSpend: 34,
+          userRank: 20,
+        },
+        receivedAt: "2026-09-09T10:00:00.000Z",
+      };
+    },
   });
   await handle({ type: "gate/configure", apiKey: "private-test-key" });
 
@@ -154,6 +176,21 @@ test("load returns a validated budget without exposing the configured key", asyn
         },
         receivedAt: "2026-09-09T10:00:00.000Z",
       },
+      requests: {
+        ok: true,
+        data: {
+          totalRequests: 874,
+          requestsOverTime: [],
+          requestsByModel: [],
+          averageSpendPerRequest: 0.01,
+          rankByAverageSpend: 29,
+          rankBySpend: 10,
+          totalUsers: 34,
+          totalUsersSpend: 34,
+          userRank: 20,
+        },
+        receivedAt: "2026-09-09T10:00:00.000Z",
+      },
     },
   });
   assert.doesNotMatch(JSON.stringify(result), /private-test-key/);
@@ -170,6 +207,10 @@ test("load without configuration or with invalid dates makes no client calls", a
     async getSpend() {
       calls += 1;
       return { ok: true, data: { totalSpend: 1 } };
+    },
+    async getRequests() {
+      calls += 1;
+      return { ok: true, data: { totalRequests: 1 } };
     },
   });
 

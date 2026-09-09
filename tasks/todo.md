@@ -180,14 +180,14 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 **Acceptance criteria:**
 
-- [ ] Request URLs use the approved range and request options shared with spend.
-- [ ] Every supplied top-level field plus daily/model rows normalizes to the documented camel-case shape without reinterpretation.
-- [ ] Missing, non-finite, or mistyped required fields and nested entries produce `INVALID_RESPONSE` for this resource only.
+- [x] Request URLs use the approved range and request options shared with spend.
+- [x] Every supplied top-level field plus daily/model rows normalizes to the documented camel-case shape without reinterpretation.
+- [x] Missing, non-finite, or mistyped required fields and nested entries produce `INVALID_RESPONSE` for this resource only.
 
 **Verification:**
 
-- [ ] Run `pnpm --filter llm-gate-companion test -- tests/gate-client.test.js tests/gate-contracts.test.js`.
-- [ ] Confirm the sanitized fixture contains all supplied fields but no key or cookie.
+- [x] Run the focused client, contract, and background tests.
+- [x] Confirm the sanitized fixture contains all supplied fields but no key or cookie.
 
 **Dependencies:** Task 6
 
