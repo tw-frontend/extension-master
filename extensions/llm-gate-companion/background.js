@@ -27,8 +27,11 @@ export function createCommandHandler(keyStore, gateClient) {
         if (!configured.ok) {
           return configured;
         }
-        const budget = await gateClient.getBudget(configured.data.apiKey);
-        return success({ budget });
+        const [budget, spend] = await Promise.all([
+          gateClient.getBudget(configured.data.apiKey),
+          gateClient.getSpend(configured.data.apiKey, range.data),
+        ]);
+        return success({ budget, spend });
       }
       default:
         return failure("UPSTREAM_ERROR", COMMAND_ERROR, false);

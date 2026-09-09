@@ -154,14 +154,14 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 **Acceptance criteria:**
 
-- [ ] Spend requests contain encoded `api_key`, `start_date`, and `end_date` parameters with no cookies or copied browser headers.
-- [ ] Totals, daily spend rows, and per-model spend rows normalize exactly to documented camel-case objects.
-- [ ] Invalid ranges cause zero fetch calls; malformed nested rows fail the spend resource as `INVALID_RESPONSE`.
+- [x] Spend requests contain encoded `api_key`, `start_date`, and `end_date` parameters with no cookies or copied browser headers.
+- [x] Totals, daily spend rows, and per-model spend rows normalize exactly to documented camel-case objects.
+- [x] Invalid ranges cause zero fetch calls; malformed nested rows fail the spend resource as `INVALID_RESPONSE`.
 
 **Verification:**
 
-- [ ] Run `pnpm --filter llm-gate-companion test -- tests/gate-date-range.test.js tests/gate-client.test.js tests/gate-contracts.test.js`.
-- [ ] Run `pnpm --filter llm-gate-companion check`.
+- [x] Run the focused date-range, client, contract, and background tests.
+- [x] Run `pnpm --filter llm-gate-companion check`.
 
 **Dependencies:** Task 5
 

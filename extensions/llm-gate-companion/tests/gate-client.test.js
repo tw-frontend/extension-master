@@ -111,3 +111,49 @@ test("budget request distinguishes timeout, network, JSON, and contract failures
     assert.doesNotMatch(JSON.stringify(result), /private-test-key/);
   }
 });
+
+test("spend request adds the validated date range", async () => {
+  let requestedUrl;
+  const client = createGateClient({
+    fetchImpl: async (url) => {
+      requestedUrl = new URL(url);
+      return response({
+        total_spend: 2,
+        avg_daily_spend: 1,
+        spend_over_time: [],
+        spend_by_model: [],
+      });
+    },
+    now: () => new Date("2026-09-09T11:00:00.000Z"),
+  });
+
+  const result = await client.getSpend("test-key", {
+    startDate: "2026-09-02",
+    endDate: "2026-09-09",
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.receivedAt, "2026-09-09T11:00:00.000Z");
+  assert.equal(requestedUrl.pathname, "/api/dashboard/spend");
+  assert.equal(requestedUrl.searchParams.get("api_key"), "test-key");
+  assert.equal(requestedUrl.searchParams.get("start_date"), "2026-09-02");
+  assert.equal(requestedUrl.searchParams.get("end_date"), "2026-09-09");
+});
+
+test("spend request rejects an invalid range without fetching", async () => {
+  let fetchCalls = 0;
+  const client = createGateClient({
+    fetchImpl: async () => {
+      fetchCalls += 1;
+      return response({});
+    },
+  });
+
+  const result = await client.getSpend("test-key", {
+    startDate: "2026-09-10",
+    endDate: "2026-09-09",
+  });
+
+  assert.equal(result.error.code, "INVALID_DATE_RANGE");
+  assert.equal(fetchCalls, 0);
+});

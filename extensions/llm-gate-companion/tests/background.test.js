@@ -110,6 +110,23 @@ test("load returns a validated budget without exposing the configured key", asyn
         receivedAt: "2026-09-09T10:00:00.000Z",
       };
     },
+    async getSpend(apiKey, range) {
+      assert.equal(apiKey, "private-test-key");
+      assert.deepEqual(range, {
+        startDate: "2026-09-02",
+        endDate: "2026-09-09",
+      });
+      return {
+        ok: true,
+        data: {
+          totalSpend: 2,
+          averageDailySpend: 1,
+          spendOverTime: [],
+          spendByModel: [],
+        },
+        receivedAt: "2026-09-09T10:00:00.000Z",
+      };
+    },
   });
   await handle({ type: "gate/configure", apiKey: "private-test-key" });
 
@@ -127,6 +144,16 @@ test("load returns a validated budget without exposing the configured key", asyn
         data: { remainingBudget: 7.5 },
         receivedAt: "2026-09-09T10:00:00.000Z",
       },
+      spend: {
+        ok: true,
+        data: {
+          totalSpend: 2,
+          averageDailySpend: 1,
+          spendOverTime: [],
+          spendByModel: [],
+        },
+        receivedAt: "2026-09-09T10:00:00.000Z",
+      },
     },
   });
   assert.doesNotMatch(JSON.stringify(result), /private-test-key/);
@@ -139,6 +166,10 @@ test("load without configuration or with invalid dates makes no client calls", a
     async getBudget() {
       calls += 1;
       return { ok: true, data: { remainingBudget: 1 } };
+    },
+    async getSpend() {
+      calls += 1;
+      return { ok: true, data: { totalSpend: 1 } };
     },
   });
 

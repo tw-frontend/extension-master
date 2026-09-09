@@ -1,4 +1,5 @@
-import { parseBudgetResponse } from "./contracts.js";
+import { parseBudgetResponse, parseSpendResponse } from "./contracts.js";
+import { validateDateRange } from "./date-range.js";
 import { failure, success } from "./result.js";
 
 const BASE_URL = "https://llm.simra.cloud";
@@ -28,9 +29,13 @@ function httpFailure(status) {
   );
 }
 
-function buildUrl(path, apiKey) {
+function buildUrl(path, apiKey, range) {
   const url = new URL(path, BASE_URL);
   url.searchParams.set("api_key", apiKey);
+  if (range) {
+    url.searchParams.set("start_date", range.startDate);
+    url.searchParams.set("end_date", range.endDate);
+  }
   return url;
 }
 
@@ -39,10 +44,10 @@ export function createGateClient({
   now = () => new Date(),
   timeoutMs = 10_000,
 } = {}) {
-  async function request(path, apiKey, parseResponse) {
+  async function request(path, apiKey, parseResponse, range) {
     let response;
     try {
-      response = await fetchImpl(buildUrl(path, apiKey).toString(), {
+      response = await fetchImpl(buildUrl(path, apiKey, range).toString(), {
         method: "GET",
         headers: { Accept: "application/json" },
         credentials: "omit",
@@ -84,6 +89,17 @@ export function createGateClient({
   return {
     getBudget(apiKey) {
       return request("/api/dashboard/budget", apiKey, parseBudgetResponse);
+    },
+    getSpend(apiKey, range) {
+      const validated = validateDateRange(range);
+      return validated.ok
+        ? request(
+            "/api/dashboard/spend",
+            apiKey,
+            parseSpendResponse,
+            validated.data,
+          )
+        : Promise.resolve(validated);
     },
   };
 }
