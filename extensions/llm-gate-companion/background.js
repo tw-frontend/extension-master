@@ -4,6 +4,15 @@ import { createKeyStore } from "./src/gate/key-store.js";
 import { failure, success } from "./src/gate/result.js";
 
 const COMMAND_ERROR = "The gate command could not be completed.";
+const RESOURCE_ERROR = "The LLM Gate resource could not be loaded.";
+
+async function settleResource(load) {
+  try {
+    return await load();
+  } catch {
+    return failure("UPSTREAM_ERROR", RESOURCE_ERROR, true);
+  }
+}
 
 export function createCommandHandler(keyStore, gateClient) {
   return async function handleCommand(command) {
@@ -28,9 +37,13 @@ export function createCommandHandler(keyStore, gateClient) {
           return configured;
         }
         const [budget, spend, requests] = await Promise.all([
-          gateClient.getBudget(configured.data.apiKey),
-          gateClient.getSpend(configured.data.apiKey, range.data),
-          gateClient.getRequests(configured.data.apiKey, range.data),
+          settleResource(() => gateClient.getBudget(configured.data.apiKey)),
+          settleResource(() =>
+            gateClient.getSpend(configured.data.apiKey, range.data),
+          ),
+          settleResource(() =>
+            gateClient.getRequests(configured.data.apiKey, range.data),
+          ),
         ]);
         return success({ budget, spend, requests });
       }

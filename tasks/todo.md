@@ -206,15 +206,15 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 **Acceptance criteria:**
 
-- [ ] Valid loads settle budget, spend, and requests independently and return each resource exactly once.
-- [ ] One or two endpoint failures preserve successful resources with their own `receivedAt` timestamps.
-- [ ] Missing configuration or invalid dates short-circuit before all network calls; all command variants remain redacted.
+- [x] Valid loads settle budget, spend, and requests independently and return each resource exactly once.
+- [x] One or two endpoint failures preserve successful resources with their own `receivedAt` timestamps.
+- [x] Missing configuration or invalid dates short-circuit before all network calls; all command variants remain redacted.
 
 **Verification:**
 
-- [ ] Run `pnpm --filter llm-gate-companion test -- tests/background.test.js`.
-- [ ] Run `pnpm --filter llm-gate-companion test`.
-- [ ] Run `pnpm --filter llm-gate-companion check`.
+- [x] Run the focused background tests.
+- [x] Run `pnpm --filter llm-gate-companion test`.
+- [x] Run `pnpm --filter llm-gate-companion check`.
 
 **Dependencies:** Tasks 5, 6, and 7
 
@@ -227,10 +227,10 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 ## Checkpoint 2: Complete data boundary
 
-- [ ] Run `pnpm --filter llm-gate-companion test`.
-- [ ] Run `node --experimental-test-coverage --test extensions/llm-gate-companion/tests/*.test.js` and inspect the spec's coverage targets.
-- [ ] Search the new extension for key/cookie material and authenticated URL fixtures; confirm none exists.
-- [ ] Compare every command/result and normalized field against `SPEC-gate-data.md`.
+- [x] Run `pnpm --filter llm-gate-companion test`.
+- [x] Run `node --experimental-test-coverage --test extensions/llm-gate-companion/tests/*.test.js` and inspect the spec's coverage targets.
+- [x] Search the new extension for key/cookie material and authenticated URL fixtures; confirm none exists.
+- [x] Compare every command/result and normalized field against `SPEC-gate-data.md`.
 
 ## Phase 3: Documentation and repository integration
 

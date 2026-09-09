@@ -235,3 +235,92 @@ test("load without configuration or with invalid dates makes no client calls", a
   );
   assert.equal(calls, 0);
 });
+
+test("load preserves successful and expected failures when a sibling throws", async () => {
+  const keyStore = createKeyStore(fakeStorage());
+  const handle = createCommandHandler(keyStore, {
+    async getBudget() {
+      return {
+        ok: true,
+        data: { remainingBudget: 7.5 },
+        receivedAt: "2026-09-09T10:00:00.000Z",
+      };
+    },
+    async getSpend() {
+      return {
+        ok: false,
+        error: {
+          code: "RATE_LIMITED",
+          message: "The LLM Gate is rate limiting requests. Try again later.",
+          retryable: true,
+          httpStatus: 429,
+        },
+      };
+    },
+    async getRequests() {
+      throw new Error("request failed for private-test-key");
+    },
+  });
+  await handle({ type: "gate/configure", apiKey: "private-test-key" });
+
+  const result = await handle({
+    type: "gate/load",
+    range: { startDate: "2026-09-02", endDate: "2026-09-09" },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.budget.ok, true);
+  assert.equal(result.data.spend.error.code, "RATE_LIMITED");
+  assert.equal(result.data.requests.error.code, "UPSTREAM_ERROR");
+  assert.doesNotMatch(JSON.stringify(result), /private-test-key/);
+});
+
+test("load starts all three independent resources before awaiting completion", async () => {
+  const started = [];
+  const resolvers = [];
+  const pending = (name) => {
+    started.push(name);
+    return new Promise((resolve) => {
+      resolvers.push(() => resolve({ ok: true, data: { name } }));
+    });
+  };
+  const keyStore = createKeyStore(fakeStorage());
+  const handle = createCommandHandler(keyStore, {
+    getBudget: () => pending("budget"),
+    getSpend: () => pending("spend"),
+    getRequests: () => pending("requests"),
+  });
+  await handle({ type: "gate/configure", apiKey: "test-key" });
+
+  const load = handle({
+    type: "gate/load",
+    range: { startDate: "2026-09-02", endDate: "2026-09-09" },
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(started, ["budget", "spend", "requests"]);
+  resolvers.forEach((resolve) => resolve());
+  assert.equal((await load).ok, true);
+});
+
+test("service-worker startup registers the runtime message listener", async () => {
+  const listeners = [];
+  globalThis.chrome = {
+    runtime: {
+      onMessage: {
+        addListener(listener) {
+          listeners.push(listener);
+        },
+      },
+    },
+    storage: { local: fakeStorage() },
+  };
+
+  try {
+    await import(`../background.js?startup=${Date.now()}`);
+    assert.equal(listeners.length, 1);
+    assert.equal(typeof listeners[0], "function");
+  } finally {
+    delete globalThis.chrome;
+  }
+});
