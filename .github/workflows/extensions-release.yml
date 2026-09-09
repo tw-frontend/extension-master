@@ -7,6 +7,7 @@ name: Extensions Release
 on:
   push:
     branches: [main]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -26,16 +27,43 @@ jobs:
           fetch-depth: 0
 
       - id: detect
-        name: Detect changed extensions
+        name: Detect changed or unreleased extensions
         run: |
           set -euo pipefail
-          base="${{ github.event.before || format('refs/heads/{0}', github.event.repository.default_branch) }}"
-          if ! git rev-parse --verify -q "$base" >/dev/null; then base="HEAD~1"; fi
+          base="${{ github.event.before }}"
+          # First push / history rewrite: event.before is the zero SHA.
+          # Diff against the empty tree so every file counts as changed.
+          if [ -z "$base" ] || ! git rev-parse --verify -q "$base" >/dev/null 2>&1; then
+            base="$(git hash-object -t tree /dev/null)"
+          fi
           changed="$(git diff --name-only "$base" HEAD || true)"
           echo "Changed files:"
           echo "$changed" | sed 's/^/  /'
           extensions="$(node scripts/detect-changed-extensions.mjs "$changed")"
+
+          # Safety net: also release any extension that has no release yet
+          # (first push to a fresh repo, or a previous release run that failed).
+          for id in $(node -e '
+            const fs = require("node:fs");
+            console.log(
+              fs.readdirSync("extensions", { withFileTypes: true })
+                .filter((d) => d.isDirectory())
+                .map((d) => d.name)
+                .join(" ")
+            );
+          '); do
+            if ! git ls-remote --tags origin "refs/tags/${id}-v*" | grep -q "${id}-v"; then
+              extensions="$(node -e '
+                const a = new Set(JSON.parse(process.argv[1]));
+                a.add(process.argv[2]);
+                console.log(JSON.stringify([...a]));
+              ' "$extensions" "$id")"
+              echo "No release found for ${id} — adding to release list"
+            fi
+          done
+
           echo "extensions=${extensions}" >> "$GITHUB_OUTPUT"
+          echo "Will release: ${extensions}"
 
   release:
     needs: detect
