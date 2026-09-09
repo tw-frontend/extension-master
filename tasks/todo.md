@@ -240,15 +240,15 @@ Implementation proceeds in dependency order. A task is complete only when its ac
 
 **Acceptance criteria:**
 
-- [ ] README documents every permission, states that local storage is unencrypted, and explains how to replace/remove a key without showing a real key.
-- [ ] README identifies reversed dates as invalid and explains partial endpoint failures.
-- [ ] Package scripts run the complete test suite, syntax checks, and built-in coverage report without adding dependencies.
+- [x] README documents every permission, states that local storage is unencrypted, and explains how to replace/remove a key without showing a real key.
+- [x] README identifies reversed dates as invalid and explains partial endpoint failures.
+- [x] Package scripts run the complete test suite, syntax checks, and built-in coverage report without adding dependencies.
 
 **Verification:**
 
-- [ ] Run `pnpm --filter llm-gate-companion test`.
-- [ ] Run `pnpm --filter llm-gate-companion check`.
-- [ ] Review README examples for secrets and misleading authentication headers.
+- [x] Run `pnpm --filter llm-gate-companion test`.
+- [x] Run `pnpm --filter llm-gate-companion check`.
+- [x] Review README examples for secrets and misleading authentication headers.
 
 **Dependencies:** Task 8
 
