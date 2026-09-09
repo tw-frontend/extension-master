@@ -98,6 +98,22 @@ test("unexpected command failures return a generic redacted result", async () =>
   assert.doesNotMatch(JSON.stringify(result), new RegExp(secret));
 });
 
+test("message listener does not respond twice when the response callback throws", async () => {
+  let responseCount = 0;
+  const listener = createMessageListener(async () => ({
+    ok: true,
+    data: { isConfigured: false },
+  }));
+
+  listener({ type: "gate/status" }, {}, () => {
+    responseCount += 1;
+    throw new Error("message port closed");
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(responseCount, 1);
+});
+
 test("load returns a validated budget without exposing the configured key", async () => {
   let loadedKey;
   const keyStore = createKeyStore(fakeStorage());

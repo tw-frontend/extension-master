@@ -55,11 +55,24 @@ export function createCommandHandler(keyStore, gateClient) {
 
 export function createMessageListener(handleCommand) {
   return function onMessage(message, _sender, respond) {
-    Promise.resolve(handleCommand(message))
-      .then(respond)
-      .catch(() => {
-        respond(failure("UPSTREAM_ERROR", COMMAND_ERROR, true));
-      });
+    Promise.resolve()
+      .then(() => handleCommand(message))
+      .then(
+        (result) => {
+          try {
+            respond(result);
+          } catch {
+            // The message port can close before an asynchronous response arrives.
+          }
+        },
+        () => {
+          try {
+            respond(failure("UPSTREAM_ERROR", COMMAND_ERROR, true));
+          } catch {
+            // Never attempt a second response after a closed message port.
+          }
+        },
+      );
     return true;
   };
 }
