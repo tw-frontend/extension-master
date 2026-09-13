@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   buildDashboardSummary,
+  buildModelChart,
   getJalaliMonthStatus,
   summarizeModels,
 } from "../src/popup-model.js";
@@ -46,6 +47,39 @@ test("combines and orders model usage without losing either metric", () => {
       { model: "model-b", spend: 7, requests: 0 },
       { model: "model-a", spend: 2, requests: 20 },
       { model: "model-c", spend: 0, requests: 3 },
+    ],
+  );
+});
+
+test("normalizes spend and request bars independently", () => {
+  assert.deepEqual(
+    buildModelChart([
+      { model: "model-a", spend: 0.02, requests: 10 },
+      { model: "model-b", spend: 0.01, requests: 40 },
+      { model: "model-c", spend: 0, requests: 0 },
+    ]),
+    [
+      {
+        model: "model-a",
+        spend: 0.02,
+        requests: 10,
+        spendPercent: 100,
+        requestsPercent: 25,
+      },
+      {
+        model: "model-b",
+        spend: 0.01,
+        requests: 40,
+        spendPercent: 50,
+        requestsPercent: 100,
+      },
+      {
+        model: "model-c",
+        spend: 0,
+        requests: 0,
+        spendPercent: 0,
+        requestsPercent: 0,
+      },
     ],
   );
 });

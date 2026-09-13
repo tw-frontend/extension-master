@@ -46,7 +46,7 @@ export default async function ExtensionDetailPage({
   const extension = getExtensionBySlug(slug);
   if (!extension) notFound();
 
-  const release: ReleaseInfo | null = await getLatestRelease(extension.id);
+  const release: ReleaseInfo | null = await getLatestRelease(extension.id, extension.version);
   const sourceUrl = sourceUrlFor(extension.repositoryPath, extension.sourceUrl);
 
   return (

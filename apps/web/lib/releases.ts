@@ -27,25 +27,49 @@ interface GitHubRelease {
  * `<extension-id>-v<semver>` tag convention. Server-side only: the result is
  * cached via Next.js revalidation and the client never needs a token.
  */
-export async function getLatestRelease(extensionId: string): Promise<ReleaseInfo | null> {
+export async function getLatestRelease(
+  extensionId: string,
+  expectedVersion?: string,
+): Promise<ReleaseInfo | null> {
   if (!SITE.githubRepo) return null;
 
   const releases = await fetchReleases();
-  if (!releases) return null;
-
   const prefix = `${extensionId}-v`;
-  const match = releases
-    .filter((r) => r.tag_name.startsWith(prefix))
-    .sort((a, b) => (b.published_at ?? b.created_at).localeCompare(a.published_at ?? a.created_at))[0];
+  const expectedTag = expectedVersion ? `${prefix}${expectedVersion}` : null;
+  const match = expectedTag
+    ? releases?.find((release) => release.tag_name === expectedTag)
+    : releases
+        ?.filter((release) => release.tag_name.startsWith(prefix))
+        .sort((a, b) =>
+          (b.published_at ?? b.created_at).localeCompare(a.published_at ?? a.created_at),
+        )[0];
+
+  // Vercel and the extension release workflow start from the same push. The
+  // Vercel build can therefore finish before GitHub has published the ZIP. A
+  // deterministic URL for the version in the registry avoids baking the old
+  // release into that deployment; the URL starts working as soon as the
+  // parallel release job creates the asset.
+  if (!match && expectedVersion) {
+    const assetName = `${extensionId}-v${expectedVersion}.zip`;
+    return {
+      version: expectedVersion,
+      zipUrl: `https://github.com/${SITE.githubRepo}/releases/download/${expectedTag}/${assetName}`,
+      publishedAt: null,
+      sizeBytes: null,
+    };
+  }
 
   if (!match) return null;
 
   const version = match.tag_name.slice(prefix.length);
-  const asset = match.assets.find((a) => a.name === `${extensionId}-v${version}.zip`);
+  const assetName = `${extensionId}-v${version}.zip`;
+  const asset = match.assets.find((candidate) => candidate.name === assetName);
 
   return {
     version,
-    zipUrl: asset?.browser_download_url ?? null,
+    zipUrl:
+      asset?.browser_download_url ??
+      `https://github.com/${SITE.githubRepo}/releases/download/${match.tag_name}/${assetName}`,
     publishedAt: match.published_at ?? match.created_at,
     sizeBytes: asset?.size ?? null,
   };

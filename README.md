@@ -53,7 +53,8 @@ edit extension
 → merge into main
 → CI builds only the affected extension(s)
 → ZIP + SHA-256 published as GitHub Release <id>-v<version>
-→ website download buttons resolve to the latest release automatically
+→ website download buttons target the extension's declared version immediately
+→ the URL becomes live as soon as the parallel GitHub Release job publishes its ZIP
 ```
 
 Releases are immutable: if the tag already exists, CI fails with a "bump the version"
@@ -77,5 +78,6 @@ message instead of overwriting.
 
 - Dashboard data comes from the committed, generated registry snapshot
   (`pnpm extension:sync`), keeping Vercel builds deterministic.
-- Download buttons degrade gracefully ("Download unavailable") until the first release.
+- Download URLs are derived from the registered extension version, so a Vercel build that
+  finishes before the parallel release job does not bake in the previous release.
 - Site name is a placeholder constant in `apps/web/lib/site.ts`.

@@ -71,11 +71,16 @@ input:focus { border-color: #31d19a; box-shadow: 0 0 0 3px rgba(49, 209, 154, 0.
 .models { margin-top: 18px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; }
 .model-list { display: grid; gap: 6px; margin-top: 9px; }
-.model-row { position: relative; overflow: hidden; border-radius: 8px; background: #13181d; }
-.model-bar { position: absolute; inset: 0 auto 0 0; background: rgba(49, 209, 154, 0.08); }
-.model-content { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; padding: 8px 10px; }
+.model-row { overflow: hidden; padding: 8px 10px 9px; border-radius: 8px; background: #13181d; }
+.model-content { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .model-name { overflow: hidden; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .model-usage { flex: 0 0 auto; color: #9da7b0; font-size: 9px; }
+.model-chart { display: grid; grid-template-columns: 43px 1fr; gap: 4px 7px; align-items: center; margin-top: 7px; }
+.model-chart-label { color: #717c87; font-size: 8px; text-transform: uppercase; }
+.model-chart-track { display: block; height: 4px; overflow: hidden; border-radius: 999px; background: #242b31; }
+.model-chart-fill { display: block; width: 0; height: 100%; border-radius: inherit; transition: width 180ms ease; }
+.model-chart-fill.spend { background: #31d19a; }
+.model-chart-fill.requests { background: #6f8cff; }
 .model-empty { padding: 18px 0; color: #7f8994; font-size: 11px; text-align: center; }
 footer { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding-top: 12px; border-top: 1px solid #22272d; }
 .text-button { border: 0; background: none; color: #9aa4ae; font-size: 10px; }

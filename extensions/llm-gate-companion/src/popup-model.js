@@ -74,6 +74,28 @@ export function summarizeModels(spendByModel = [], requestsByModel = []) {
   );
 }
 
+export function buildModelChart(models = []) {
+  const maximumSpend = Math.max(
+    0,
+    ...models.map(({ spend }) =>
+      Number.isFinite(spend) && spend > 0 ? spend : 0,
+    ),
+  );
+  const maximumRequests = Math.max(
+    0,
+    ...models.map(({ requests }) =>
+      Number.isFinite(requests) && requests > 0 ? requests : 0,
+    ),
+  );
+
+  return models.map((model) => ({
+    ...model,
+    spendPercent: maximumSpend > 0 ? (model.spend / maximumSpend) * 100 : 0,
+    requestsPercent:
+      maximumRequests > 0 ? (model.requests / maximumRequests) * 100 : 0,
+  }));
+}
+
 export function buildDashboardSummary({ budget, spend, requests }) {
   const errors = [budget, spend, requests]
     .filter((resource) => !resource?.ok)

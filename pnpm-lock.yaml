@@ -61,6 +61,8 @@ importers:
         specifier: ^5.7.3
         version: 5.9.3
 
+  extensions/llm-gate-companion: {}
+
   extensions/openrouter-deals: {}
 
   extensions/sazeh-devtools:

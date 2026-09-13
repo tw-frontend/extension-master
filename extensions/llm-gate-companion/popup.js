@@ -1,4 +1,8 @@
-import { buildDashboardSummary, getJalaliMonthStatus } from "./src/popup-model.js";
+import {
+  buildDashboardSummary,
+  buildModelChart,
+  getJalaliMonthStatus,
+} from "./src/popup-model.js";
 
 const byId = (id) => document.getElementById(id);
 const setupView = byId("setup-view");
@@ -62,13 +66,9 @@ function renderModels(models) {
     return;
   }
 
-  const maximum = Math.max(...models.map((model) => model.spend || model.requests), 1);
-  for (const model of models.slice(0, 6)) {
+  for (const model of buildModelChart(models).slice(0, 6)) {
     const row = document.createElement("div");
     row.className = "model-row";
-    const bar = document.createElement("span");
-    bar.className = "model-bar";
-    bar.style.width = `${Math.max(4, ((model.spend || model.requests) / maximum) * 100)}%`;
     const content = document.createElement("div");
     content.className = "model-content";
     const name = document.createElement("span");
@@ -79,7 +79,31 @@ function renderModels(models) {
     usage.className = "model-usage";
     usage.textContent = `${formatMoney(model.spend)} · ${formatCount(model.requests)} req`;
     content.append(name, usage);
-    row.append(bar, content);
+
+    const chart = document.createElement("div");
+    chart.className = "model-chart";
+    const chartRows = [
+      ["Spend", model.spendPercent],
+      ["Requests", model.requestsPercent],
+    ];
+    for (const [label, percent] of chartRows) {
+      const chartLabel = document.createElement("span");
+      chartLabel.className = "model-chart-label";
+      chartLabel.textContent = label;
+      const track = document.createElement("span");
+      track.className = "model-chart-track";
+      track.setAttribute(
+        "aria-label",
+        `${model.model} ${label.toLowerCase()}: ${Math.round(percent)}% of the highest model`,
+      );
+      const fill = document.createElement("span");
+      fill.className = `model-chart-fill ${label.toLowerCase()}`;
+      fill.style.width = `${percent}%`;
+      track.append(fill);
+      chart.append(chartLabel, track);
+    }
+
+    row.append(content, chart);
     list.append(row);
   }
 }

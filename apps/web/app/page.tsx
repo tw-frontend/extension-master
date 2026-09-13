@@ -13,7 +13,7 @@ export default async function HomePage() {
   const stableCount = extensions.filter((e) => e.status === "stable").length;
 
   const releaseEntries = await Promise.all(
-    extensions.map(async (e) => [e.id, await getLatestRelease(e.id)] as const),
+    extensions.map(async (e) => [e.id, await getLatestRelease(e.id, e.version)] as const),
   );
   const releases = Object.fromEntries(releaseEntries) as Record<string, ReleaseInfo | null>;
   const github = repoUrl();
