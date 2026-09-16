@@ -4,52 +4,49 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-}
+  color-scheme: dark;
+  --radius: 0.5rem;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --tw-red-300: #e15c5c;
+  --tw-red-400: #de4747;
+  --tw-red-500: #d93636;
+  --tw-red-600: #c42e2e;
+  --tw-red-700: #ae2929;
+  --tw-neutral-100: #e4e7eb;
+  --tw-neutral-200: #cbd2d9;
+  --tw-neutral-400: #7b8794;
+  --tw-neutral-700: #3e4c59;
+  --tw-neutral-800: #1f2933;
+  --tw-neutral-900: #10151a;
+  --tw-light-20: rgba(255, 255, 255, 0.2);
+  --tw-light-10: rgba(255, 255, 255, 0.1);
+  --tw-light-05: rgba(255, 255, 255, 0.05);
+
+  --background: var(--tw-neutral-900);
+  --foreground: var(--tw-neutral-100);
+  --card: var(--tw-neutral-800);
+  --card-foreground: var(--tw-neutral-100);
+  --popover: var(--tw-neutral-800);
+  --popover-foreground: var(--tw-neutral-100);
+  --primary: var(--tw-red-600);
+  --primary-foreground: #ffffff;
+  --brand: var(--tw-red-300);
+  --secondary: var(--tw-neutral-700);
+  --secondary-foreground: var(--tw-neutral-100);
+  --muted: var(--tw-light-05);
+  --muted-foreground: var(--tw-neutral-200);
+  --accent: rgba(222, 71, 71, 0.14);
+  --accent-foreground: var(--tw-neutral-100);
+  --destructive: var(--tw-red-300);
+  --border: var(--tw-light-20);
+  --input: var(--tw-light-20);
+  --ring: var(--tw-red-300);
 }
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 4px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -59,6 +56,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-brand: var(--brand);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -75,7 +73,36 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply m-0 bg-background text-foreground;
+    font-family:
+      Inter,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+  }
+
+  ::selection {
+    background: var(--tw-red-700);
+    color: #ffffff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

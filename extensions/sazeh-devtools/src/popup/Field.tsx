@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { ChevronRight } from "lucide-react";
 
 import { getAtPath } from "../core/model";
 import type { FieldNode } from "../core/types";
@@ -37,29 +38,34 @@ export function Field({ node, draft, onChange, query }: FieldProps) {
 
   if (node.kind === "object") {
     const isRoot = node.path.length === 0;
+    const children = node.children?.map((child) => (
+      <Field
+        key={child.path.join(".")}
+        node={child}
+        draft={draft}
+        onChange={onChange}
+        query={query}
+      />
+    ));
+
+    if (isRoot) {
+      return <div className="space-y-2.5">{children}</div>;
+    }
+
     return (
-      <fieldset
-        className={
-          isRoot
-            ? "space-y-3"
-            : "rounded-lg border bg-card/40 px-3 pt-2 pb-3 space-y-1"
-        }
+      <details
+        className="group/category overflow-hidden rounded-lg border bg-card"
+        open={query ? true : undefined}
       >
-        {!isRoot && (
-          <legend className="px-1 text-xs font-semibold text-primary">
-            {node.label}
-          </legend>
-        )}
-        {node.children?.map((child) => (
-          <Field
-            key={child.path.join(".")}
-            node={child}
-            draft={draft}
-            onChange={onChange}
-            query={query}
-          />
-        ))}
-      </fieldset>
+        <summary className="flex cursor-pointer list-none items-center gap-2 bg-muted/60 px-3 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
+          <ChevronRight className="size-3.5 text-primary transition-transform group-open/category:rotate-90" />
+          <span>{node.label}</span>
+          <code className="ml-auto text-[10px] font-normal text-muted-foreground">
+            {node.path.join(".")}
+          </code>
+        </summary>
+        <div className="space-y-1 border-t px-3 py-2.5">{children}</div>
+      </details>
     );
   }
 
@@ -123,7 +129,7 @@ function Control({
           onChange={(e) =>
             onChange(
               node.path,
-              e.target.value === "" ? null : Number(e.target.value)
+              e.target.value === "" ? null : Number(e.target.value),
             )
           }
         />
@@ -166,7 +172,7 @@ function Control({
               e.target.value
                 .split("\n")
                 .map((s) => s.trim())
-                .filter(Boolean)
+                .filter(Boolean),
             )
           }
         />

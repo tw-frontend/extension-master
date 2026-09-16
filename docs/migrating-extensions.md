@@ -56,6 +56,8 @@ cp -r <source-repo>/{icons,tests} extensions/openrouter-deals/
 - Create `extension.config.json` (schema table in `docs/creating-extensions.md` §2).
 - Write the extension `README.md` (purpose, features, dev, build, install, permissions).
 - Copy the icon path into `icon` (e.g. `icons/icon-128.png`, `public/logo.png`).
+- Align user-facing surfaces with `docs/extension-design-system.md`; preserve behavior while
+  replacing one-off visual tokens with the shared semantic roles.
 
 ### 6. Verify
 
@@ -83,6 +85,7 @@ pnpm --filter web dev          # eyeball the card + detail page
 - [ ] `package.json`: name = id, version set, no `workspace:*` leftovers
 - [ ] tsconfig/build config self-contained
 - [ ] `extension.config.json` + `README.md`
+- [ ] UI aligned with `docs/extension-design-system.md`
 - [ ] `pnpm extension:validate` green
 - [ ] ZIP verified (`manifest.json` at root)
 - [ ] version bumped for the first release here

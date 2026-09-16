@@ -40,7 +40,8 @@ pnpm extension:package <id>       # build + ZIP + manifest check + sha256 → ar
 
 ## Adding an extension
 
-Follow `docs/creating-extensions.md` (new) or `docs/migrating-extensions.md` (existing).
+Follow `docs/creating-extensions.md` (new) or `docs/migrating-extensions.md` (existing),
+and use `docs/extension-design-system.md` for the shared Telewebion visual language.
 Short version: create `extensions/<id>/`, add `extension.config.json`, run
 `pnpm extension:sync` — it appears on the dashboard and CI picks it up. No website or
 workflow edits.

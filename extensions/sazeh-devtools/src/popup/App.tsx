@@ -29,6 +29,7 @@ type Status = { kind: "info" | "error"; text: string } | null;
 
 const Text = {
   title: "Sazeh DevTools",
+  subtitle: "Runtime configuration",
   schemaBadge: "schema",
   schemaBadgeTitle: "Schema descriptor found",
   inferredBadge: "inferred",
@@ -135,11 +136,21 @@ export function App() {
 
   return (
     <div className="flex max-h-[560px] w-[480px] flex-col bg-background text-foreground">
-      <header className="flex items-center justify-between px-3 py-2.5">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          {Text.title}
+      <header className="flex items-center justify-between px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="h-8 w-1 shrink-0 rounded-full bg-primary" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{Text.title}</p>
+            <p className="text-brand text-[10px] tracking-[0.12em] uppercase">
+              {Text.subtitle}
+            </p>
+          </div>
           {entry?.schema ? (
-            <Badge variant="secondary" title={Text.schemaBadgeTitle}>
+            <Badge
+              variant="outline"
+              className="border-brand/60 bg-primary/10 text-brand"
+              title={Text.schemaBadgeTitle}
+            >
               {Text.schemaBadge}
             </Badge>
           ) : entry ? (
@@ -154,6 +165,7 @@ export function App() {
           onClick={() => void load()}
           disabled={busy}
           title={Text.refresh}
+          aria-label={Text.refresh}
         >
           <RefreshCw className={busy ? "animate-spin" : undefined} />
         </Button>
@@ -176,7 +188,7 @@ export function App() {
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-2 px-3 py-2.5">
+          <div className="flex items-center gap-2 px-4 py-3">
             {scan && scan.entries.length > 1 ? (
               <Select value={selectedKey} onValueChange={selectEntry}>
                 <SelectTrigger size="sm" className="max-w-[50%]">
@@ -198,14 +210,14 @@ export function App() {
             <Input
               type="search"
               placeholder={Text.filterPlaceholder}
-              className="h-8 flex-1"
+              className="h-9 flex-1 bg-card"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
           <Separator />
 
-          <div className="flex-1 overflow-auto px-3 py-3">
+          <div className="flex-1 overflow-auto px-4 py-3">
             {model && (
               <Field
                 node={model}
@@ -218,10 +230,12 @@ export function App() {
 
           {status && (
             <div
-              className={`mx-3 mb-2 rounded-md px-3 py-1.5 text-xs ${
+              role={status.kind === "error" ? "alert" : "status"}
+              aria-live={status.kind === "error" ? "assertive" : "polite"}
+              className={`mx-4 mb-3 rounded-md border px-3 py-2 text-xs ${
                 status.kind === "error"
-                  ? "bg-destructive/15 text-destructive"
-                  : "bg-primary/10 text-foreground"
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-primary/40 bg-primary/10 text-foreground"
               }`}
             >
               {status.text}
@@ -229,7 +243,7 @@ export function App() {
           )}
 
           <Separator />
-          <footer className="flex items-center justify-between gap-2 px-3 py-2.5">
+          <footer className="flex items-center justify-between gap-2 px-4 py-3">
             <Label
               htmlFor="pin"
               className="gap-1.5 text-xs font-normal text-muted-foreground"

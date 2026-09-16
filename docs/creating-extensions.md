@@ -103,6 +103,7 @@ next dev/build (predev/prebuild hooks run it automatically).
 - [ ] `package.json` with version
 - [ ] `extension.config.json` (valid per schema)
 - [ ] `README.md`
+- [ ] UI follows `docs/extension-design-system.md` and its semantic color tokens
 - [ ] production build reachable at `build.outputDir` with `manifest.json` inside
 - [ ] `pnpm extension:validate` green
 - [ ] `pnpm extension:package <id>` produces a valid ZIP
