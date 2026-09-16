@@ -89,6 +89,7 @@ export function developerPicks(state, settings = DEFAULT_SETTINGS, now = new Dat
     const best = rankByPreferences(quotes.map((row, index) => ({
       ...row, id: `${model.id}:${index}`, popularityRank: index + 1,
     })), providerPriorities)[0];
+    if (!best) continue;
     const scores = benchmarkFor(model, state.benchmarks);
     rows.push({ ...model, ...best, id: model.id, popularityRank: model.popularityRank,
       scores, quality: overallScore(scores), nitro: nitroAdvice(quotes, best) });

@@ -59,6 +59,19 @@ test('smarter and faster preferences use their own evidence', () => {
     ...DEFAULT_SETTINGS, priorities: { smarter: true },
   }, now).picks.length, 0);
 });
+test('faster preference skips models whose providers have no speed evidence', () => {
+  const state = fixture();
+  for (const detail of Object.values(state.details)) {
+    delete detail.endpoints[0].latency_last_30m;
+    delete detail.endpoints[0].throughput_last_30m;
+  }
+  assert.doesNotThrow(() => developerPicks(state, {
+    ...DEFAULT_SETTINGS, priorities: { faster: true },
+  }, now));
+  assert.equal(developerPicks(state, {
+    ...DEFAULT_SETTINGS, priorities: { faster: true },
+  }, now).picks.length, 0);
+});
 test('live price changes alter cheaper selection; stale or unavailable quotes cannot be picks', () => {
   const state = fixture();
   assert.equal(developerPicks(state, DEFAULT_SETTINGS, now).picks[0].id, 'delta/value');

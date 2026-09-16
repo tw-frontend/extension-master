@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "OpenRouter Daily Deals",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Customizable model picks and daily deals across OpenRouter's weekly top 200.",
   "minimum_chrome_version": "120",
   "permissions": [
