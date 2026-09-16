@@ -1,4 +1,4 @@
-# LLM Gate Companion — 0.2.1
+# LLM Gate Companion — 0.2.2
 
 Chromium extension for private Simra LLM Gate budget and usage data.
 

@@ -1,6 +1,6 @@
 {
   "name": "sazeh-devtools",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Chrome extension to inspect and override Sazeh runtime config stored in localStorage.",
   "type": "module",
   "private": true,

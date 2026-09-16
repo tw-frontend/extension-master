@@ -3,7 +3,7 @@
   "name": "Sazeh DevTools",
   "shortDescription": "Inspect and override Sazeh runtime config cached in localStorage — a typed editor instead of hand-editing JSON.",
   "description": "Sazeh UI apps fetch remote config and cache it in the page's localStorage under tw-sazeh-<client>-<version>. The service reads that cache once at startup, so trying different config values normally means hand-editing localStorage and reloading. This Chrome extension (MV3, built with Vite + CRXJS + React) turns that into a typed popup editor: it finds every tw-sazeh-* entry in the active tab, unwraps the stale-while-revalidate envelope, and renders fields from a published JSON Schema descriptor when available — or infers them from the live value's runtime types otherwise. Save & Reload writes your edits and pins the override against background revalidation; Reset removes the key so the app fetches fresh config. No remote permissions: it only uses activeTab + scripting, granted when you click the toolbar icon.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "status": "beta",
   "icon": "public/logo.png",
   "browserSupport": ["chrome", "edge", "brave"],

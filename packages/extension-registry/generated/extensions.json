@@ -4,7 +4,7 @@
     "name": "LLM Gate Companion",
     "shortDescription": "Track private LLM Gate budget and usage with local-only API-key storage.",
     "description": "A personal Chromium extension for viewing Simra LLM Gate budget, Jalali billing progress, rankings, and date-ranged model usage. The API key stays in local extension storage and is used only for direct, credential-free requests to the configured dashboard endpoints.",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "status": "beta",
     "icon": "icons/icon-128.png",
     "browserSupport": [
@@ -54,7 +54,7 @@
     "name": "OpenRouter Daily Deals",
     "shortDescription": "User-customizable OpenRouter model picks and daily deals across the weekly top 200.",
     "description": "A dependency-free Chrome extension (MV3) that lets each user rank OpenRouter's weekly top 200 text models by any combination of Cheaper, Smarter and Faster. Selected preferences have equal weight and customize both Developer Picks and Daily Deals without provider or model-family bonuses. Cheaper uses the user's request estimate, Faster uses measured provider performance, and Smarter uses optional benchmark evidence loaded with a locally stored OpenRouter key. Every card shows live pricing, estimated request cost, latency, throughput and Nitro guidance. No inference requests, analytics or remote scripts are used.",
-    "version": "1.3.1",
+    "version": "1.3.2",
     "status": "stable",
     "icon": "icons/icon-128.png",
     "browserSupport": [
@@ -108,7 +108,7 @@
     "name": "Sazeh DevTools",
     "shortDescription": "Inspect and override Sazeh runtime config cached in localStorage — a typed editor instead of hand-editing JSON.",
     "description": "Sazeh UI apps fetch remote config and cache it in the page's localStorage under tw-sazeh-<client>-<version>. The service reads that cache once at startup, so trying different config values normally means hand-editing localStorage and reloading. This Chrome extension (MV3, built with Vite + CRXJS + React) turns that into a typed popup editor: it finds every tw-sazeh-* entry in the active tab, unwraps the stale-while-revalidate envelope, and renders fields from a published JSON Schema descriptor when available — or infers them from the live value's runtime types otherwise. Save & Reload writes your edits and pins the override against background revalidation; Reset removes the key so the app fetches fresh config. No remote permissions: it only uses activeTab + scripting, granted when you click the toolbar icon.",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "status": "beta",
     "icon": "public/logo.png",
     "browserSupport": [

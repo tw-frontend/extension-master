@@ -3,7 +3,7 @@
   "name": "LLM Gate Companion",
   "shortDescription": "Track private LLM Gate budget and usage with local-only API-key storage.",
   "description": "A personal Chromium extension for viewing Simra LLM Gate budget, Jalali billing progress, rankings, and date-ranged model usage. The API key stays in local extension storage and is used only for direct, credential-free requests to the configured dashboard endpoints.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "status": "beta",
   "icon": "icons/icon-128.png",
   "browserSupport": [
