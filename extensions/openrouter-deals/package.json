@@ -1,10 +1,10 @@
 {
   "name": "openrouter-daily-deals",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/credentials.test.js && node tests/model-quality.test.js && node tests/pricing.test.js && node tests/background.test.js && node tests/developer-picks.test.js",
-    "check": "node --check background.js && node --check popup.js && node --check pricing.js && node --check credentials.js && node --check model-quality.js && node --check developer-picks.js"
+    "test": "node tests/credentials.test.js && node tests/model-quality.test.js && node tests/preferences.test.js && node tests/pricing.test.js && node tests/background.test.js && node tests/developer-picks.test.js",
+    "check": "node --check background.js && node --check popup.js && node --check pricing.js && node --check credentials.js && node --check model-quality.js && node --check preferences.js && node --check developer-picks.js"
   }
 }

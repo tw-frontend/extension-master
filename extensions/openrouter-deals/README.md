@@ -1,32 +1,17 @@
-# OpenRouter Daily Deals — 1.2.0
+# OpenRouter Daily Deals — 1.3.0
 
 A dependency-free Chromium extension that evaluates OpenRouter's weekly top
-200 text models. It provides **Developer picks** and **Daily deals** without a
-hardcoded provider order or model-family allowlist.
+200 text models. Each user customizes **Developer picks** and **Daily deals**
+with three combinable preferences:
 
-## Two honest modes
+- **Cheaper** — lower estimated request cost ranks higher.
+- **Smarter** — stronger OpenRouter benchmark evidence ranks higher.
+- **Faster** — lower time to first token and higher output throughput rank
+  higher.
 
-**Discovery mode** requires no credentials. It recommends models only from
-evidence the extension can observe directly:
-
-- weekly OpenRouter usage;
-- the eligible provider price for your request size;
-- median time to first token and output throughput when available;
-- advertised context length; and
-- active provider or scheduled discounts.
-
-**Intelligent mode** is optional. A locally stored OpenRouter API key lets the
-worker read OpenRouter's benchmark endpoint and add purpose-specific evidence
-for:
-
-1. coding and debugging;
-2. planning and architecture;
-3. agentic execution;
-4. quality-adjusted value; and
-5. critical work, where capability outranks price.
-
-The same model may lead more than one purpose. The extension does not replace a
-winner with a weaker model merely to create five different cards.
+There are no separate recommendation modes, hardcoded provider orders, or
+model-family allowlists. Select one, two, or all three preferences; selected
+choices receive equal weight and persist in the browser profile.
 
 ## Install or upgrade
 
@@ -34,10 +19,10 @@ winner with a weaker model merely to create five different cards.
    unpacked**.
 2. Select the folder containing `manifest.json`.
 3. When upgrading, click the extension's **Reload** button.
-4. Open the popup. Old ranking caches migrate automatically to schema 3 and a
-   fresh top-200 provider scan begins.
-5. Optional: open **Optional Intelligent mode** and paste a dedicated,
-   limited OpenRouter key.
+4. Open the popup. Old saved settings remain valid and default to Cheaper until
+   the user chooses another combination.
+5. Optional: open **Smarter preference data** and add a dedicated, limited
+   OpenRouter key if you want benchmark-backed rankings.
 
 The source is the build; there is no bundling step. The first complete provider
 scan normally takes around 12 minutes and resumes automatically while Chrome is
@@ -47,89 +32,82 @@ running.
 
 The worker fetches
 `GET /api/v1/models?output_modalities=text&sort=top-weekly`, takes the first 200
-entries, then removes aliases, automatic routers and malformed records. Every
-remaining provider and family is eligible. Popularity defines the candidate
-universe; it is not treated as an intelligence score.
+entries, then removes aliases, automatic routers, and malformed records. Every
+remaining provider and family is eligible.
 
-With a key, `GET /api/v1/benchmarks?source=artificial-analysis` supplies coding,
-intelligence and agentic indices. Records are validated, minimized and joined
-only by exact model slug or canonical slug. Unknown or missing scores stay
-missing. Model names and marketing descriptions are never used as substitutes
-for benchmark evidence.
+For each selected preference, the extension normalizes current evidence across
+eligible models:
 
-Purpose scores use these weights:
-
-| Purpose | Primary evidence | Supporting evidence |
+| Preference | Evidence | Better score |
 | --- | --- | --- |
-| Coding | 60% coding | 25% agentic, 15% intelligence |
-| Planning | 55% intelligence | 35% agentic, 10% coding |
-| Agentic | 60% agentic | 25% coding, 15% intelligence |
-| Value | Average available benchmark evidence | Logarithmic request-cost penalty |
-| Critical | Average available benchmark evidence | Price only breaks ties |
+| Cheaper | Estimated input, output, and request fees | Lower cost |
+| Smarter | Mean available coding, intelligence, and agentic indices | Higher benchmark |
+| Faster | Median first-token latency and output throughput | Lower latency, higher throughput |
 
-If a supporting index is missing, the available weights are renormalized. A
-model must have the purpose's primary index to lead that purpose.
+A model must have evidence for every selected preference. This is deliberate:
+missing data cannot become an advantage, and the extension never silently
+ignores one of the user's choices. Dimension scores are averaged with equal
+weight. Request cost, weekly popularity, and model ID break exact ties.
 
-Daily Deals considers the same full candidate pool. In Intelligent mode, the
-highlighted recommendation must be at or above the median benchmark quality of
-the currently eligible, benchmark-covered models. This stops a deeply
-discounted but weak model from being presented as the best deal. The complete
-discount list remains visible and labels models below the recommendation floor.
-Discovery mode ranks verified promotion percentage, request cost and weekly
-popularity without making a capability claim.
+Developer Picks shows the five highest-ranked matches. Daily Deals uses the
+same preferences for its highlighted model and for ordering verified discounted
+models. Provider selection inside a model also respects Cheaper and Faster.
 
-## API key and security boundary
+## Smarter preference and API-key boundary
 
-The API key is optional. It is stored under a dedicated credentials record in
+The optional OpenRouter key is a data source, not a mode switch. It lets the
+worker read `GET /api/v1/benchmarks?source=artificial-analysis`. Records are
+validated, minimized, and joined only by exact model slug or canonical slug.
+Model names and marketing descriptions are never used as intelligence proxies.
+
+The key is stored under a dedicated credentials record in
 `chrome.storage.local`, which is local to the browser profile but is **not an
 encrypted secret vault**. Use a dedicated key with a conservative limit.
 
-- The saved key is never rendered back into the popup.
-- It is sent only to `https://openrouter.ai/api/v1/benchmarks` in the
-  `Authorization` header.
-- It is never placed in recommendation state, errors, logs, URLs or generated
+- The saved value is never rendered back into the popup.
+- It is sent only to OpenRouter's benchmark endpoint.
+- It never enters recommendation state, errors, logs, URLs, or generated
   metadata.
-- Removing the key deletes the credential and benchmark-derived cache.
-- A 401, 429, malformed response or network failure falls back to Discovery
-  mode without blocking price and provider scanning.
+- Removing it deletes the credential and benchmark cache.
+- Authentication, rate-limit, malformed-response, or network failures do not
+  block catalog, price, or provider scanning.
 
-The extension makes no inference requests and includes no content scripts,
-analytics or remotely executed code. Host access remains limited to
-`https://openrouter.ai/*`.
+If Smarter is selected without benchmark evidence, the extension displays an
+honest missing-data state instead of guessing intelligence from popularity.
 
-## Prices, discounts and speed
+## Prices, discounts, and speed
 
 Provider details come from
 `GET /api/v1/models/{author}/{slug}/endpoints`. Published prompt and completion
 prices are USD per token and already include provider discounts. The UI
-multiplies them by one million for display and derives the undiscounted
-reference price only when the API exposes a discount fraction.
+multiplies them by one million for display and derives an undiscounted reference
+price only when the API exposes a discount fraction.
 
-Conditional pricing supports strict prompt-token thresholds, UTC weekdays and
+Conditional pricing supports strict prompt-token thresholds, UTC weekdays, and
 half-open time windows, including overnight windows. Later matching overrides
 win per field. Permanently free models and context surcharges are not labeled
 as promotions.
 
-API latency and throughput medians are preferred. For benchmark-covered models
-whose API metrics are missing, the worker may parse the public provider table
+API latency and throughput medians are preferred. When Faster is selected and
+an endpoint metric is missing, the worker may parse the public provider table
 without executing its scripts. A row must uniquely match provider name and
 current input/output prices; otherwise performance remains unavailable.
 
-Nitro compares the cheapest eligible provider with the highest measured output
+Nitro compares the selected provider with the highest measured output
 throughput. It never claims to improve model intelligence or startup latency.
 
 ## Refresh and limitations
 
 The worker scans up to 18 models per alarm, six concurrently, and checkpoints
-after each group. Catalog, benchmark and endpoint data refresh every six hours.
-HTTP 429 responses respect `Retry-After`; benchmark backoff is isolated so it
-cannot stop anonymous catalog and price updates. Chrome alarms may be delayed
-during sleep and do not run while Chrome is closed.
+after each group. Catalog, benchmark, and endpoint data refresh every six
+hours. HTTP 429 responses respect `Retry-After`; benchmark backoff is isolated
+from anonymous catalog and price updates.
 
-Benchmarks cover fewer models than the OpenRouter catalog and can lag new
-releases. Prices, provider availability, reasoning tokens, caching, long-context
-surcharges and non-text charges can change actual cost. Recommendations are
-evidence-based comparisons, not guarantees of task success.
+Benchmarks and performance metrics cover fewer models than the catalog and can
+lag new releases. Prices, provider availability, reasoning tokens, caching,
+long-context surcharges, and non-text charges can change actual cost.
+Recommendations are evidence-based comparisons, not guarantees of task
+success.
 
 Sources: [Models API](https://openrouter.ai/docs/api/api-reference/models/list-all-models-and-their-properties),
 [Benchmarks API](https://openrouter.ai/docs/api/api-reference/benchmarks/list-benchmarks),
@@ -138,19 +116,21 @@ Sources: [Models API](https://openrouter.ai/docs/api/api-reference/models/list-a
 
 ## Files and verification
 
-- `background.js`: catalog, benchmark and provider refresh, queueing and backoff.
-- `model-quality.js`: benchmark validation, exact matching and purpose scores.
-- `developer-picks.js`: Intelligent and Discovery recommendation policies.
-- `pricing.js`: price overrides and Daily Deals ranking.
+- `preferences.js`: preference validation, normalization, and shared ranking.
+- `developer-picks.js`: top-200 candidate and provider selection.
+- `pricing.js`: price overrides and personalized Daily Deals.
+- `model-quality.js`: benchmark validation and exact matching.
+- `background.js`: catalog, benchmark, and provider refresh with backoff.
 - `credentials.js`: API-key boundary validation.
-- `popup.*`: accessible mode, cards and settings UI.
-- `tests/`: ranking, pricing, benchmark, credential and recovery coverage.
+- `popup.*`: accessible preference controls, cards, and settings UI.
+- `tests/`: ranking, pricing, benchmark, credential, and recovery coverage.
 
 Run with Node 20 or newer:
 
 ```text
 node tests/credentials.test.js
 node tests/model-quality.test.js
+node tests/preferences.test.js
 node tests/pricing.test.js
 node tests/background.test.js
 node tests/developer-picks.test.js
@@ -159,5 +139,6 @@ node --check popup.js
 node --check pricing.js
 node --check credentials.js
 node --check model-quality.js
+node --check preferences.js
 node --check developer-picks.js
 ```

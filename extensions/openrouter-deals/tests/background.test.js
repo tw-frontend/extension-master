@@ -49,6 +49,26 @@ test('upgrade refreshes old caches and keeps top-200 ranks without family filter
   assert.equal(db.state.models.find(m => m.id === 'z-ai/glm-5.2').popularityRank, 2);
   assert.equal(db.state.models.some(m => m.id === 'z-ai/glm-5.4'), false);
 });
+test('selecting faster backfills missing provider performance once per refresh window', async () => {
+  const row = model('speed/model');
+  db = { settings: { priorities: { faster: true } }, state: { schema: 3, models: [{ ...row, popularityRank: 1 }],
+    catalogAt: Date.now(), queue: [], details: { 'speed/model': { at: Date.now(), endpoints: [{
+      status: 0, provider_name: 'Demo', pricing: { prompt: '.000001', completion: '.000002' },
+    }] } } } };
+  calls = [];
+  globalThis.fetch = async url => {
+    calls.push(url);
+    if (url.endsWith('/speed/model')) return { ok: true, async text() { return '<html>No provider table</html>'; } };
+    return { ok: true, async json() { return { data: { endpoints: [{ status: 0, provider_name: 'Demo',
+      pricing: { prompt: '.000001', completion: '.000002' } }] } }; } };
+  };
+  await scan();
+  assert.equal(calls.some(url => url.endsWith('/speed/model')), true);
+  assert.ok(db.state.details['speed/model'].performanceCheckedAt);
+  calls = [];
+  await scan();
+  assert.equal(calls.length, 0);
+});
 test('a configured key fetches benchmarks with auth but never copies the key into state', async () => {
   const apiKey = 'sk-or-v1-test-secret';
   db = { credentials: { apiKey } }; calls = [];

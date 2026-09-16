@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {
   normalizeBenchmarks,
   benchmarkFor,
-  scorePurpose,
   overallScore,
 } from '../model-quality.js';
 
@@ -53,14 +52,11 @@ test('benchmarks use exact id or canonical slug and never fuzzy provider matchin
   assert.equal(benchmarkFor({ id: 'new-provider/code-star-plus' }, benchmarks), null);
 });
 
-test('purpose scores require the purpose-specific primary benchmark', () => {
+test('overall quality averages the available benchmark evidence', () => {
   const complete = { coding: 92, intelligence: 80, agentic: 88 };
-  assert.equal(scorePurpose(complete, 'coding'), 89.2);
-  assert.equal(scorePurpose(complete, 'planning'), 84);
-  assert.equal(scorePurpose(complete, 'agentic'), 87.8);
-  assert.equal(scorePurpose({ intelligence: 90 }, 'coding'), null);
-  assert.equal(scorePurpose({ coding: 71 }, 'coding'), 71);
   assert.equal(overallScore(complete), 86.7);
+  assert.equal(overallScore({ coding: 71 }), 71);
+  assert.equal(overallScore(null), null);
 });
 
 test('invalid benchmark envelopes fail closed', () => {

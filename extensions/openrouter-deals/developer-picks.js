@@ -1,5 +1,6 @@
 import { DEFAULT_SETTINGS, FRESH_MS, quote } from './pricing.js';
-import { benchmarkFor, overallScore, scorePurpose } from './model-quality.js';
+import { benchmarkFor, overallScore } from './model-quality.js';
+import { normalizePriorities, rankByPreferences } from './preferences.js';
 
 export function eligibleCatalog(catalog) {
   return (Array.isArray(catalog) ? catalog : []).slice(0, 200)
@@ -65,6 +66,7 @@ export function nitroAdvice(quotes, base) {
 }
 export function developerPicks(state, settings = DEFAULT_SETTINGS, now = new Date()) {
   const models = state.schema === 3 ? (state.models ?? []) : [];
+  const priorities = normalizePriorities(settings.priorities);
   const rows = [];
   for (const model of models) {
     if (!(model.popularityRank <= 200)) continue;
@@ -79,48 +81,26 @@ export function developerPicks(state, settings = DEFAULT_SETTINGS, now = new Dat
         return q && { ...q, ...performance(e, detail), provider: e.provider_name || e.name, tag: e.tag };
       }).filter(q => q && (settings.includeFree || q.cost > 0));
     if (!quotes.length) continue;
-    quotes.sort((a, b) => a.cost - b.cost);
-    const best = quotes[0];
+    const providerPriorities = {
+      cheaper: priorities.cheaper || !priorities.faster,
+      smarter: false,
+      faster: priorities.faster,
+    };
+    const best = rankByPreferences(quotes.map((row, index) => ({
+      ...row, id: `${model.id}:${index}`, popularityRank: index + 1,
+    })), providerPriorities)[0];
     const scores = benchmarkFor(model, state.benchmarks);
-    rows.push({ ...model, ...best, scores, quality: overallScore(scores), nitro: nitroAdvice(quotes, best) });
+    rows.push({ ...model, ...best, id: model.id, popularityRank: model.popularityRank,
+      scores, quality: overallScore(scores), nitro: nitroAdvice(quotes, best) });
   }
   const benchmarked = rows.filter(row => row.quality != null).length;
-  const pick = (purpose, role, why, score) => rows.map(row => ({ row, score: score(row) }))
-    .filter(candidate => candidate.score != null && Number.isFinite(candidate.score))
-    .sort((a, b) => b.score - a.score || a.row.cost - b.row.cost || a.row.popularityRank - b.row.popularityRank)[0]?.row;
-  const decorate = (row, purpose, role, why, evidenceScore = null) => row && ({
-    ...row, purpose, role, why, evidenceScore,
-  });
-  let picks;
-  if (benchmarked) {
-    const intelligent = [
-      ['coding', 'Coding & debugging', 'Highest coding-focused benchmark result among ready top-200 models.', row => scorePurpose(row.scores, 'coding')],
-      ['planning', 'Planning & architecture', 'Highest planning-focused intelligence and agentic evidence.', row => scorePurpose(row.scores, 'planning')],
-      ['agentic', 'Agentic execution', 'Highest agentic-focused benchmark result for multi-step work.', row => scorePurpose(row.scores, 'agentic')],
-      ['value', 'Best value', 'Strong benchmark evidence after accounting for your request cost.', row => row.quality == null ? null : row.quality - 8 * Math.log2(1 + row.cost * 1000)],
-      ['critical', 'Critical work', 'Highest overall benchmark evidence; price is only a tie-breaker.', row => row.quality],
-    ];
-    picks = intelligent.map(([purpose, role, why, score]) => {
-      const row = pick(purpose, role, why, score);
-      return decorate(row, purpose, role, why, row ? score(row) : null);
-    }).filter(Boolean);
-  } else {
-    const discovery = [
-      ['popular', 'Most used', 'Highest weekly OpenRouter usage among ready models.', row => -row.popularityRank],
-      ['budget', 'Lowest request cost', 'Lowest eligible provider price for your token estimate.', row => -row.cost],
-      ['latency', 'Fastest first token', 'Lowest measured median time to first token.', row => row.latency == null ? null : -row.latency],
-      ['throughput', 'Fastest output', 'Highest measured median output throughput.', row => row.throughput],
-      ['context', 'Longest context', 'Largest advertised context window among ready models.', row => positive(row.context_length)],
-    ];
-    picks = discovery.map(([purpose, role, why, score]) => decorate(pick(purpose, role, why, score), purpose, role, why))
-      .filter(Boolean);
-  }
+  const picks = rankByPreferences(rows, priorities).slice(0, 5);
   return {
-    mode: benchmarked ? 'intelligent' : 'discovery',
     picks,
     shortlist: picks,
     assessed: models.length,
     benchmarked,
+    priorities,
     benchmarkAsOf: benchmarked ? state.benchmarks?.asOf ?? null : null,
   };
 }

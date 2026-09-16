@@ -22,8 +22,8 @@ function fixture(withBenchmarks = true) {
   const prices = { 'alpha/code-star': .000002, 'beta/architect': .000003,
     'gamma/agent': .0000025, 'delta/value': .0000001, 'omega/critical': .00002 };
   const details = Object.fromEntries(models.map((m, index) => [m.id, { at: +now, endpoints: [{
-    status: 0, provider_name: 'Test', latency_last_30m: { p50: 1 + index },
-    throughput_last_30m: { p50: 50 + index * 50 },
+    status: 0, provider_name: 'Test', latency_last_30m: { p50: 1 - index * .2 },
+    throughput_last_30m: { p50: index === 4 ? 300 : 50 + index * 50 },
     pricing: { prompt: String(prices[m.id]), completion: String(prices[m.id]) },
   }] }]));
   const benchmarks = withBenchmarks ? { asOf: '2026-09-15T00:00:00Z', fetchedAt: +now, byModel: {
@@ -35,31 +35,35 @@ function fixture(withBenchmarks = true) {
   } } : null;
   return { schema: 3, models, details, benchmarks };
 }
-test('intelligent mode selects benchmark-backed winners for each purpose without provider rules', () => {
-  const result = developerPicks(fixture(), DEFAULT_SETTINGS, now);
-  assert.equal(result.mode, 'intelligent');
+test('custom preferences rank five matches without provider rules or fixed purposes', () => {
+  const result = developerPicks(fixture(), {
+    ...DEFAULT_SETTINGS, priorities: { cheaper: true, smarter: false, faster: false },
+  }, now);
   assert.equal(result.picks.length, 5);
-  assert.deepEqual(Object.fromEntries(result.picks.map(row => [row.purpose, row.id])), {
-    coding: 'alpha/code-star', planning: 'beta/architect', agentic: 'gamma/agent',
-    value: 'delta/value', critical: 'omega/critical',
-  });
+  assert.equal(result.picks[0].id, 'delta/value');
+  assert.deepEqual(result.priorities, { cheaper: true, smarter: false, faster: false });
+  assert.deepEqual(result.picks[0].matchedPreferences, ['cheaper']);
   assert.equal(result.benchmarked, 5);
   assert.equal(result.benchmarkAsOf, '2026-09-15T00:00:00Z');
 });
-test('discovery mode makes only measurable market claims', () => {
-  const result = developerPicks(fixture(false), DEFAULT_SETTINGS, now);
-  assert.equal(result.mode, 'discovery');
-  assert.deepEqual(Object.fromEntries(result.picks.map(row => [row.purpose, row.id])), {
-    popular: 'alpha/code-star', budget: 'delta/value', latency: 'alpha/code-star',
-    throughput: 'omega/critical', context: 'omega/critical',
-  });
-  assert.equal(result.benchmarked, 0);
+test('smarter and faster preferences use their own evidence', () => {
+  const smart = developerPicks(fixture(), {
+    ...DEFAULT_SETTINGS, priorities: { smarter: true },
+  }, now);
+  const fast = developerPicks(fixture(), {
+    ...DEFAULT_SETTINGS, priorities: { faster: true },
+  }, now);
+  assert.equal(smart.picks[0].id, 'omega/critical');
+  assert.equal(fast.picks[0].id, 'omega/critical');
+  assert.equal(developerPicks(fixture(false), {
+    ...DEFAULT_SETTINGS, priorities: { smarter: true },
+  }, now).picks.length, 0);
 });
-test('live price changes alter value selection; stale or unavailable quotes cannot be picks', () => {
+test('live price changes alter cheaper selection; stale or unavailable quotes cannot be picks', () => {
   const state = fixture();
-  assert.equal(developerPicks(state, DEFAULT_SETTINGS, now).picks.find(r => r.purpose === 'value').id, 'delta/value');
+  assert.equal(developerPicks(state, DEFAULT_SETTINGS, now).picks[0].id, 'delta/value');
   state.details['delta/value'].endpoints[0].pricing = { prompt: '1', completion: '1' };
-  assert.notEqual(developerPicks(state, DEFAULT_SETTINGS, now).picks.find(r => r.purpose === 'value').id, 'delta/value');
+  assert.notEqual(developerPicks(state, DEFAULT_SETTINGS, now).picks[0].id, 'delta/value');
   assert.equal(developerPicks(state, DEFAULT_SETTINGS, new Date(+now + FRESH_MS)).picks.length, 0);
   state.details['alpha/code-star'].endpoints[0].status = -2;
   assert.equal(developerPicks(state, DEFAULT_SETTINGS, now).picks.some(r => r.id === 'alpha/code-star'), false);

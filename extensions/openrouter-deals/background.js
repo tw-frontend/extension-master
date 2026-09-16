@@ -32,7 +32,7 @@ async function getJSON(path, apiKey = null) {
   return body;
 }
 export async function scan(force = false) {
-  let { state = {}, credentials = {} } = await chrome.storage.local.get(["state", "credentials"]);
+  let { state = {}, credentials = {}, settings = {} } = await chrome.storage.local.get(["state", "credentials", "settings"]);
   if (!force && state.retryAt > Date.now()) return;
   try {
     if (force || state.schema !== 3 || !state.catalogAt || Date.now() - state.catalogAt >= FRESH_MS) {
@@ -60,7 +60,7 @@ export async function scan(force = false) {
       try { apiKey = normalizeApiKey(credentials.apiKey); }
       catch {
         delete state.benchmarks;
-        state.benchmarkError = 'The configured API key is not valid. Discovery mode remains available.';
+        state.benchmarkError = 'The configured API key is not valid. Smarter preference data is unavailable.';
         state.benchmarkRetryAt = Date.now() + FRESH_MS;
       }
     }
@@ -82,10 +82,20 @@ export async function scan(force = false) {
         });
       } catch (error) {
         delete state.benchmarks;
-        state.benchmarkError = 'Benchmark evidence could not be loaded. Discovery mode remains available.';
+        state.benchmarkError = 'Benchmark evidence could not be loaded. Smarter preference data is unavailable.';
         state.benchmarkRetryAt = error.retryAt ?? Date.now() + FRESH_MS;
       }
       await chrome.storage.local.set({ state });
+    }
+    if (settings.priorities?.faster && state.schema === 3) {
+      const performanceQueue = state.models.filter(model => {
+        const detail = state.details?.[model.id];
+        return detail && Date.now() - detail.at < FRESH_MS &&
+          Date.now() - (detail.performanceCheckedAt ?? 0) >= FRESH_MS &&
+          detail.endpoints.some(endpoint => endpoint.status === 0 &&
+            (!endpoint.latency_last_30m?.p50 || !endpoint.throughput_last_30m?.p50));
+      }).map(model => model.id);
+      state.queue = [...new Set([...(state.queue ?? []), ...performanceQueue])];
     }
     const batch = (state.queue ?? []).slice(0, 18);
     for (let start = 0; start < batch.length; start += 6) {
@@ -98,9 +108,10 @@ export async function scan(force = false) {
           if (!Array.isArray(data.endpoints))
             throw new Error("Malformed endpoint response");
           let performance = [], performanceError = null;
-          const model = state.models.find(m => m.id === id);
-          if (benchmarkFor(model, state.benchmarks) && data.endpoints.some(e => e.status === 0 &&
+          let performanceCheckedAt = null;
+          if (settings.priorities?.faster && data.endpoints.some(e => e.status === 0 &&
               (!e.latency_last_30m?.p50 || !e.throughput_last_30m?.p50))) {
+            performanceCheckedAt = Date.now();
             try {
               const response = await fetch(`https://openrouter.ai/${id.split('/').map(encodeURIComponent).join('/')}`, {
                 credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(8000),
@@ -110,7 +121,7 @@ export async function scan(force = false) {
               if (!performance.length) performanceError = 'Provider speed table unavailable';
             } catch (error) { performanceError = error.message; }
           }
-          return { at: Date.now(), endpoints: data.endpoints, performance, performanceError };
+          return { at: Date.now(), endpoints: data.endpoints, performance, performanceError, performanceCheckedAt };
         }),
       );
       for (let i = 0; i < ids.length; i++) {
@@ -171,7 +182,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "scan") void run();
 });
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (message.type === "refresh" || message.type === 'credentialsChanged') {
+  if (message.type === "refresh" || message.type === 'credentialsChanged' || message.type === 'preferencesChanged') {
     void run(Boolean(message.force));
     respond({ ok: true });
   }

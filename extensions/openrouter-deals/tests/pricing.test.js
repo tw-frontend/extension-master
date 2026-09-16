@@ -32,36 +32,46 @@ test('context surcharges and permanently free prices are not promotions', () => 
 });
 function stateFor(items) {
   return { catalogAt: +now, models: items.map(([id], index) => ({ id, name: id, pricing, popularityRank: index + 1 })),
-    details: Object.fromEntries(items.map(([id, cost, discount = 0, status = 0]) => [id, { at: +now, endpoints: [
-      { status, provider_name: 'Test', pricing: { prompt: String(cost), completion: String(cost), discount } }
+    details: Object.fromEntries(items.map(([id, cost, discount = 0, status = 0, latency = null, throughput = null]) => [id, { at: +now, endpoints: [
+      { status, provider_name: 'Test', pricing: { prompt: String(cost), completion: String(cost), discount },
+        latency_last_30m: latency == null ? null : { p50: latency },
+        throughput_last_30m: throughput == null ? null : { p50: throughput } }
     ] }])) };
 }
 test('daily deals rank all providers by evidence without a family preference', () => {
   const state = stateFor([['z-ai/glm-5', .004, .5], ['new-provider/better-deal', .001, .5],
     ['another/model', .002, .3]]);
   const result = recommendations(state, DEFAULT_SETTINGS, now);
-  assert.equal(result.mode, 'discovery');
   assert.equal(result.best.id, 'new-provider/better-deal');
-  assert.deepEqual(result.deals.map(r => r.id), ['new-provider/better-deal', 'z-ai/glm-5', 'another/model']);
+  assert.deepEqual(result.deals.map(r => r.id), ['new-provider/better-deal', 'another/model', 'z-ai/glm-5']);
 });
-test('without promotions the cheapest eligible model wins in discovery mode', () => {
+test('without promotions the cheaper preference still selects the lowest request cost', () => {
   const state = stateFor([['z-ai/glm', .1], ['other/cheap', .001, .5], ['google/gemini', .001]]);
   assert.equal(recommendations(state, DEFAULT_SETTINGS, now).best.id, 'other/cheap');
   state.details['other/cheap'].endpoints[0].pricing.prompt = '0';
   assert.equal(recommendations(state, DEFAULT_SETTINGS, now).best.id, 'other/cheap');
 });
-test('intelligent mode applies a benchmark quality floor before choosing the best deal', () => {
+test('smarter preference ranks benchmark evidence directly', () => {
   const state = stateFor([['strong/model', .002, .2], ['medium/model', .001, .1], ['weak/model', .0001, .9]]);
   state.benchmarks = { byModel: {
     'strong/model': { coding: 90, intelligence: 90, agentic: 90 },
     'medium/model': { coding: 80, intelligence: 80, agentic: 80 },
     'weak/model': { coding: 20, intelligence: 20, agentic: 20 },
   } };
-  const result = recommendations(state, DEFAULT_SETTINGS, now);
-  assert.equal(result.mode, 'intelligent');
-  assert.equal(result.qualityFloor, 80);
+  const result = recommendations(state, { ...DEFAULT_SETTINGS, priorities: { smarter: true } }, now);
   assert.equal(result.best.id, 'strong/model');
-  assert.equal(result.deals.find(row => row.id === 'weak/model').qualityEligible, false);
+  assert.deepEqual(result.deals.map(row => row.id), ['strong/model', 'medium/model', 'weak/model']);
+  assert.equal(result.qualityFloor, undefined);
+});
+test('faster preference ranks endpoint speed and excludes missing measurements', () => {
+  const state = stateFor([
+    ['slow/model', .001, .5, 0, 2, 40],
+    ['fast/model', .004, .2, 0, .2, 300],
+    ['unknown/model', .0001, .9],
+  ]);
+  const result = recommendations(state, { ...DEFAULT_SETTINGS, priorities: { faster: true } }, now);
+  assert.equal(result.best.id, 'fast/model');
+  assert.deepEqual(result.deals.map(row => row.id), ['fast/model', 'slow/model']);
 });
 test('unavailable providers and over-limit endpoints cannot win', () => {
   const state = stateFor([['z-ai/glm', .001, .5, -2], ['other/ok', .002]]);

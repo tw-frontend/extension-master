@@ -1,11 +1,21 @@
 import { benchmarkFor, overallScore } from './model-quality.js';
+import { DEFAULT_PRIORITIES, normalizePriorities, rankByPreferences } from './preferences.js';
 
 export const DEFAULT_SETTINGS = {
   input: 1000,
   output: 1000,
   includeFree: true,
+  priorities: { ...DEFAULT_PRIORITIES },
 };
 export const FRESH_MS = 6 * 60 * 60 * 1000;
+function groupByModel(rows) {
+  const groups = new Map();
+  for (const row of rows) {
+    if (groups.has(row.id)) groups.get(row.id).push(row);
+    else groups.set(row.id, [row]);
+  }
+  return [...groups.values()];
+}
 export function amount(value) {
   if (value === undefined || value === null || value === "") return null;
   const n = Number(value);
@@ -77,14 +87,6 @@ export function quote(pricing, settings, now = new Date()) {
     discounted: percent > 0.000001,
   };
 }
-export function compare(a, b, intelligent = false) {
-  if (a.discounted !== b.discounted) return a.discounted ? -1 : 1;
-  if (intelligent && a.quality != null && b.quality != null && a.quality !== b.quality) {
-    return b.quality - a.quality;
-  }
-  if (a.discounted && a.percent !== b.percent) return b.percent - a.percent;
-  return a.cost - b.cost || a.popularityRank - b.popularityRank || a.id.localeCompare(b.id);
-}
 export function recommendations(
   state,
   settings = DEFAULT_SETTINGS,
@@ -123,6 +125,8 @@ export function recommendations(
             tag: endpoint.tag,
             checkedAt: detail.at,
             verified: true,
+            latency_last_30m: endpoint.latency_last_30m,
+            throughput_last_30m: endpoint.throughput_last_30m,
           });
       }
     } else if (
@@ -149,25 +153,23 @@ export function recommendations(
           name: model.name,
           popularityRank: model.popularityRank ?? Number.MAX_SAFE_INTEGER,
           quality: overallScore(scores),
+          latency: amount(candidate.latency_last_30m?.p50),
+          throughput: amount(candidate.throughput_last_30m?.p50),
         });
       }
     }
   }
-  rows.sort((a, b) => a.cost - b.cost);
-  const unique = rows.filter((row, index) => rows.findIndex(other => other.id === row.id) === index);
-  const qualities = unique.map(row => row.quality).filter(value => value != null).sort((a, b) => a - b);
-  const intelligent = qualities.length > 0;
-  const qualityFloor = intelligent ? qualities[Math.floor(qualities.length / 2)] : null;
-  unique.forEach(row => { row.qualityEligible = !intelligent || row.quality != null && row.quality >= qualityFloor; });
-  const eligible = intelligent ? unique.filter(row => row.qualityEligible) : unique;
-  eligible.sort((a, b) => compare(a, b, intelligent));
-  const deals = unique.filter(row => row.discounted).sort((a, b) => compare(a, b, intelligent)).slice(0, 6);
+  const priorities = normalizePriorities(settings.priorities);
+  const unique = groupByModel(rows).map(group => rankByPreferences(group, priorities)[0]).filter(Boolean);
+  const discounted = rows.filter(row => row.discounted);
+  const uniqueDeals = groupByModel(discounted).map(group => rankByPreferences(group, priorities)[0]).filter(Boolean);
+  const eligible = rankByPreferences(unique, priorities);
+  const deals = rankByPreferences(uniqueDeals, priorities).slice(0, 6);
   return {
     best: eligible[0] ?? null,
     deals,
     checked,
     total: (state.models ?? []).length,
-    mode: intelligent ? 'intelligent' : 'discovery',
-    qualityFloor,
+    priorities,
   };
 }

@@ -1,63 +1,59 @@
-# Spec: Adaptive OpenRouter model selection
+# Spec: Customizable OpenRouter model selection
 
 ## Objective
 
-Replace the OpenRouter Daily Deals extension's static provider preference and
-family allowlist with evidence-based recommendations across the first 200 text
-models returned by OpenRouter's weekly-popularity catalog.
+Give each OpenRouter Daily Deals user direct control over how models are ranked
+across the first 200 text models in OpenRouter's weekly-popularity catalog.
+There is one recommendation system, not separate Intelligent and Discovery
+modes.
 
-The extension has two honest operating modes:
+The popup exposes three independent, combinable preferences:
 
-- **Intelligent mode:** enabled when the user supplies an OpenRouter API key.
-  Rankings use current benchmark evidence plus live price and provider
-  performance.
-- **Discovery mode:** available without a key. Rankings use only observable
-  market and runtime evidence and never claim to identify the most capable
-  model.
+1. **Cheaper** — prefer the lowest estimated cost for the user's token amounts.
+2. **Smarter** — prefer the strongest available benchmark evidence.
+3. **Faster** — prefer lower time to first token and higher output throughput.
 
-The target user is a developer choosing a model for a concrete workload. The
-feature succeeds when a newly released or previously unknown model can become
-a recommendation without a code release or provider-specific rule.
+At least one preference must remain selected. Selected preferences have equal
+weight so the behavior is understandable and does not hide product-chosen
+priorities from the user. The default is Cheaper because it works without
+credentials or performance coverage.
 
 ## Recommendation contract
 
 The candidate universe is the first 200 valid, non-router text models from
 `GET /api/v1/models?output_modalities=text&sort=top-weekly`.
 
-Intelligent mode provides these purposes:
+Each selected preference is normalized across the currently eligible models:
 
-1. Coding and debugging
-2. Planning and architecture
-3. Agentic execution
-4. Best value above a benchmark quality floor
-5. Critical work, where capability outranks price
+- Cheaper scores lower estimated request cost higher.
+- Smarter scores higher mean benchmark evidence higher.
+- Faster combines lower median time to first token and higher median output
+  throughput, using whichever speed measurements are available.
 
-Discovery mode provides only claims supported without benchmark evidence:
+A model must have evidence for every selected preference. This prevents a
+missing measurement from becoming an accidental advantage and prevents the
+extension from silently ignoring a user's choice. The selected dimension
+scores are averaged, then request cost, weekly popularity, and model ID provide
+deterministic tie-breakers.
 
-1. Most used
-2. Lowest request cost
-3. Fastest first token
-4. Fastest output
-5. Longest context
-
-The same model may legitimately lead more than one purpose. The UI must not
-substitute a weaker model merely to create visual variety.
-
-Daily Deals considers the complete candidate universe. Intelligent mode uses
-benchmark quality as part of deal ordering; Discovery mode uses discounts,
-request cost, weekly popularity, and measured provider performance. Neither
-mode gives a provider or model family a hardcoded bonus.
+Developer Picks shows the five highest-ranked matches for the selected
+preferences. Daily Deals uses the same ranking for its highlighted model and
+orders verified discounted models by the same preferences. No provider or
+model family receives a hardcoded bonus.
 
 ## Data and interfaces
 
 - Anonymous catalog and endpoint requests continue to work without a key.
+- The optional OpenRouter key is a data-source setting for the Smarter
+  preference, not a mode switch.
 - With a key, the worker requests `GET /api/v1/benchmarks` and stores a
   validated, minimal score map plus source/as-of metadata.
 - Benchmark records are joined by exact OpenRouter model slug or canonical
-  slug. No fuzzy provider-name matching is used for intelligence scores.
-- Missing benchmark fields remain missing. They are not converted to zero.
-- External payloads are validated before they affect state or ranking.
+  slug. Model names and descriptions are never intelligence proxies.
+- Missing benchmark and performance fields remain missing, not zero.
 - Benchmark failure does not block catalog, pricing, or provider scanning.
+- User settings, including selected preferences, persist in
+  `chrome.storage.local`.
 
 ## Credential boundary
 
@@ -83,15 +79,25 @@ mode gives a provider or model family a hardcoded bonus.
 Focused verification:
 
 ```text
-pnpm --dir extensions/openrouter-deals test
-pnpm --dir extensions/openrouter-deals run check
+node tests/credentials.test.js
+node tests/model-quality.test.js
+node tests/preferences.test.js
+node tests/pricing.test.js
+node tests/background.test.js
+node tests/developer-picks.test.js
+node --check background.js
+node --check popup.js
+node --check pricing.js
+node --check preferences.js
+node --check developer-picks.js
 ```
 
 Repository verification:
 
 ```text
-pnpm extension:validate openrouter-deals
-pnpm --filter web typecheck
+node node_modules/tsx/dist/cli.mjs scripts/extension-cli.ts sync openrouter-deals
+node node_modules/tsx/dist/cli.mjs scripts/extension-cli.ts validate openrouter-deals
+node node_modules/typescript/bin/tsc --noEmit
 ```
 
 ## Code style and testing strategy
@@ -103,41 +109,43 @@ strings are never inserted with `innerHTML`.
 Tests must cover:
 
 - arbitrary providers entering the top-200 candidate pool;
-- benchmark validation and exact-slug matching;
-- each Intelligent and Discovery purpose;
-- no provider-family preference in Developer Picks or Daily Deals;
-- benchmark authentication without key leakage;
-- graceful fallback after 401, 429, malformed, or unavailable benchmark data;
+- single-preference and combined-preference ranking;
+- exclusion when a selected preference lacks evidence;
+- deterministic fallback when settings are absent or tampered with;
+- Developer Picks and Daily Deals sharing the user's preferences;
+- no provider-family preference in either view;
+- benchmark authentication without key leakage and graceful failure;
 - saving, replacing, and removing credentials without echoing the saved key.
 
 ## Boundaries
 
-- Always: label the active mode and evidence date; expose missing evidence;
-  preserve endpoint eligibility checks, backoff, accessibility, and local-only
+- Always: show the active preferences and evidence availability; preserve
+  endpoint eligibility checks, backoff, accessibility, and local-only
   execution.
 - Ask first: add another external data provider, send inference requests, add
   analytics, or broaden host permissions.
-- Never: scrape screenshots, infer quality from marketing descriptions, store a
-  key in recommendation state, log credentials, or claim an unbenchmarked
-  model is objectively best.
+- Never: scrape screenshots, infer quality from marketing descriptions, store
+  a key in recommendation state, log credentials, or claim an unbenchmarked
+  model is smarter.
 
 ## Success criteria
 
-- No GLM/DeepSeek/Gemini/MiMo ordering or family allowlist remains in ranking
-  code or UI.
-- Any valid model in the top 200 can win a recommendation from its evidence.
-- The extension remains useful without an API key and clearly calls that mode
-  Discovery mode.
-- A valid key enables benchmark-backed Intelligent mode; an invalid key falls
-  back without breaking price scanning.
-- Daily Deals evaluates all top-200 candidates rather than only reviewed
-  families.
+- Intelligent and Discovery mode names, branching, badges, and descriptions
+  are removed.
+- Cheaper, Smarter, and Faster are accessible multi-select buttons and persist
+  per browser profile.
+- Any non-empty combination changes both Developer Picks and Daily Deals using
+  the documented equal-weight ranking.
+- Selecting Smarter without benchmark evidence produces an honest missing-data
+  state rather than an intelligence guess.
+- Any valid model in the top 200 can win from its evidence.
 - Automated tests, syntax checks, extension validation, and browser smoke
   verification pass.
 
 ## Not doing
 
+- Custom numeric weights or sliders in this version.
 - Running paid inference evaluations across the catalog.
 - Adding a server, account system, telemetry, or remote configuration.
 - Combining third-party benchmark vendors outside OpenRouter's API.
-- Claiming one universal best model independent of workload.
+- Claiming one universal best model independent of user preferences.

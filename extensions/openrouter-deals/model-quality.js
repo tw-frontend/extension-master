@@ -37,25 +37,6 @@ export function benchmarkFor(model, benchmarks) {
     (model.canonical_slug ? benchmarks.byModel[model.canonical_slug] : null) ?? null;
 }
 
-const PURPOSES = {
-  coding: { primary: 'coding', weights: { coding: .6, agentic: .25, intelligence: .15 } },
-  planning: { primary: 'intelligence', weights: { intelligence: .55, agentic: .35, coding: .1 } },
-  agentic: { primary: 'agentic', weights: { agentic: .6, coding: .25, intelligence: .15 } },
-};
-
-export function scorePurpose(scores, purpose) {
-  const config = PURPOSES[purpose];
-  if (!config || finiteScore(scores?.[config.primary]) == null) return null;
-  let weighted = 0, weight = 0;
-  for (const [key, factor] of Object.entries(config.weights)) {
-    const score = finiteScore(scores?.[key]);
-    if (score == null) continue;
-    weighted += score * factor;
-    weight += factor;
-  }
-  return weight ? rounded(weighted / weight) : null;
-}
-
 export function overallScore(scores) {
   const values = ['coding', 'intelligence', 'agentic']
     .map(key => finiteScore(scores?.[key])).filter(value => value != null);
