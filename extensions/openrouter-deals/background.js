@@ -1,11 +1,15 @@
-import { family, FRESH_MS } from "./pricing.js";
+import { FRESH_MS } from "./pricing.js";
 import { eligibleCatalog, parsePerformance } from "./developer-picks.js";
+import { benchmarkFor, normalizeBenchmarks } from './model-quality.js';
+import { normalizeApiKey } from './credentials.js';
 const API = "https://openrouter.ai/api/v1";
 let running;
-async function getJSON(path) {
+async function getJSON(path, apiKey = null) {
+  const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined;
   const response = await fetch(`${API}${path}`, {
     credentials: "omit",
     cache: "no-store",
+    headers,
     signal: AbortSignal.timeout(10000),
   });
   if (!response.ok) {
@@ -24,43 +28,63 @@ async function getJSON(path) {
     throw error;
   }
   const body = await response.json();
-  if (!body.data) throw new Error("Unexpected OpenRouter response");
-  return body.data;
+  if (!body || body.data == null) throw new Error("Unexpected OpenRouter response");
+  return body;
 }
 export async function scan(force = false) {
-  let { state = {} } = await chrome.storage.local.get("state");
-  if (state.retryAt > Date.now()) return;
+  let { state = {}, credentials = {} } = await chrome.storage.local.get(["state", "credentials"]);
+  if (!force && state.retryAt > Date.now()) return;
   try {
-    if (force || state.schema !== 2 || !state.catalogAt || Date.now() - state.catalogAt >= FRESH_MS) {
-      const data = await getJSON("/models?output_modalities=text&sort=top-weekly");
+    if (force || state.schema !== 3 || !state.catalogAt || Date.now() - state.catalogAt >= FRESH_MS) {
+      const { data } = await getJSON("/models?output_modalities=text&sort=top-weekly");
       if (!Array.isArray(data) || !data.length)
         throw new Error("Empty or malformed model catalog");
-      const models = data.slice(0, 200).map((m, index) => ({ ...m, popularityRank: index + 1 })).filter(
-        (m) =>
-          m.id &&
-          m.pricing &&
-          !m.alias_target &&
-          !m.id.startsWith("openrouter/") &&
-          !m.id.startsWith("~"),
-      );
-      const eligible = new Map(eligibleCatalog(data).map(m => [m.id, m]));
-      models.forEach(m => Object.assign(m, eligible.get(m.id) ?? {}));
-      models.sort(
-        (a, b) =>
-          Number(Boolean(b.generation)) - Number(Boolean(a.generation)) ||
-          (family(a) < 0 ? 99 : family(a)) - (family(b) < 0 ? 99 : family(b)) ||
-          a.id.localeCompare(b.id),
-      );
+      const models = eligibleCatalog(data);
       state = {
         models,
-        schema: 2,
+        schema: 3,
         catalogSize: data.length,
         catalogAt: Date.now(),
         details: {},
         queue: models.map((m) => m.id),
         failures: 0,
         error: null,
+        benchmarks: state.benchmarks,
+        benchmarkError: state.benchmarkError,
+        benchmarkRetryAt: state.benchmarkRetryAt,
       };
+      await chrome.storage.local.set({ state });
+    }
+    let apiKey = '';
+    if (credentials.apiKey != null) {
+      try { apiKey = normalizeApiKey(credentials.apiKey); }
+      catch {
+        delete state.benchmarks;
+        state.benchmarkError = 'The configured API key is not valid. Discovery mode remains available.';
+        state.benchmarkRetryAt = Date.now() + FRESH_MS;
+      }
+    }
+    if (!apiKey && credentials.apiKey == null) {
+      delete state.benchmarks;
+      delete state.benchmarkError;
+      delete state.benchmarkRetryAt;
+    } else if (apiKey && (force || !state.benchmarks?.fetchedAt ||
+        Date.now() - state.benchmarks.fetchedAt >= FRESH_MS && !(state.benchmarkRetryAt > Date.now()))) {
+      try {
+        const payload = await getJSON('/benchmarks?source=artificial-analysis&max_results=500', apiKey);
+        state.benchmarks = normalizeBenchmarks(payload);
+        state.benchmarkError = null;
+        state.benchmarkRetryAt = 0;
+        state.queue = [...(state.queue ?? [])].sort((a, b) => {
+          const left = state.models.find(model => model.id === a);
+          const right = state.models.find(model => model.id === b);
+          return Number(Boolean(benchmarkFor(right, state.benchmarks))) - Number(Boolean(benchmarkFor(left, state.benchmarks)));
+        });
+      } catch (error) {
+        delete state.benchmarks;
+        state.benchmarkError = 'Benchmark evidence could not be loaded. Discovery mode remains available.';
+        state.benchmarkRetryAt = error.retryAt ?? Date.now() + FRESH_MS;
+      }
       await chrome.storage.local.set({ state });
     }
     const batch = (state.queue ?? []).slice(0, 18);
@@ -68,14 +92,14 @@ export async function scan(force = false) {
       const ids = batch.slice(start, start + 6);
       const results = await Promise.allSettled(
         ids.map(async (id) => {
-          const data = await getJSON(
+          const { data } = await getJSON(
             `/models/${id.split("/").map(encodeURIComponent).join("/")}/endpoints`,
           );
           if (!Array.isArray(data.endpoints))
             throw new Error("Malformed endpoint response");
           let performance = [], performanceError = null;
           const model = state.models.find(m => m.id === id);
-          if (model?.generation && data.endpoints.some(e => e.status === 0 &&
+          if (benchmarkFor(model, state.benchmarks) && data.endpoints.some(e => e.status === 0 &&
               (!e.latency_last_30m?.p50 || !e.throughput_last_30m?.p50))) {
             try {
               const response = await fetch(`https://openrouter.ai/${id.split('/').map(encodeURIComponent).join('/')}`, {
@@ -147,7 +171,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "scan") void run();
 });
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (message.type === "refresh") {
+  if (message.type === "refresh" || message.type === 'credentialsChanged') {
     void run(Boolean(message.force));
     respond({ ok: true });
   }

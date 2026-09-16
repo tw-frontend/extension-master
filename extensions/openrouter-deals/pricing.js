@@ -1,16 +1,11 @@
-export const FAMILIES = ["GLM", "DeepSeek", "Gemini", "MiMo"];
+import { benchmarkFor, overallScore } from './model-quality.js';
+
 export const DEFAULT_SETTINGS = {
   input: 1000,
   output: 1000,
   includeFree: true,
 };
 export const FRESH_MS = 6 * 60 * 60 * 1000;
-export function family(model) {
-  const value = `${model.id} ${model.name}`;
-  return FAMILIES.findIndex((name) =>
-    new RegExp(`\\b${name}`, "i").test(value),
-  );
-}
 export function amount(value) {
   if (value === undefined || value === null || value === "") return null;
   const n = Number(value);
@@ -82,17 +77,13 @@ export function quote(pricing, settings, now = new Date()) {
     discounted: percent > 0.000001,
   };
 }
-export function compare(a, b) {
-  const ap = a.discounted && a.family >= 0,
-    bp = b.discounted && b.family >= 0;
-  if (ap !== bp) return ap ? -1 : 1;
-  if (ap && a.family !== b.family) return a.family - b.family;
-  return (
-    a.cost - b.cost ||
-    (a.family < 0 ? 99 : a.family) - (b.family < 0 ? 99 : b.family) ||
-    b.percent - a.percent ||
-    a.id.localeCompare(b.id)
-  );
+export function compare(a, b, intelligent = false) {
+  if (a.discounted !== b.discounted) return a.discounted ? -1 : 1;
+  if (intelligent && a.quality != null && b.quality != null && a.quality !== b.quality) {
+    return b.quality - a.quality;
+  }
+  if (a.discounted && a.percent !== b.percent) return b.percent - a.percent;
+  return a.cost - b.cost || a.popularityRank - b.popularityRank || a.id.localeCompare(b.id);
 }
 export function recommendations(
   state,
@@ -150,23 +141,33 @@ export function recommendations(
         });
     }
     for (const candidate of candidates) {
-      if (settings.includeFree || candidate.cost > 0)
+      if (settings.includeFree || candidate.cost > 0) {
+        const scores = benchmarkFor(model, state.benchmarks);
         rows.push({
           ...candidate,
           id: model.id,
           name: model.name,
-          family: family(model),
+          popularityRank: model.popularityRank ?? Number.MAX_SAFE_INTEGER,
+          quality: overallScore(scores),
         });
+      }
     }
   }
-  rows.sort(compare);
-  const unique = rows.filter(
-    (row, index) => rows.findIndex((other) => other.id === row.id) === index,
-  );
+  rows.sort((a, b) => a.cost - b.cost);
+  const unique = rows.filter((row, index) => rows.findIndex(other => other.id === row.id) === index);
+  const qualities = unique.map(row => row.quality).filter(value => value != null).sort((a, b) => a - b);
+  const intelligent = qualities.length > 0;
+  const qualityFloor = intelligent ? qualities[Math.floor(qualities.length / 2)] : null;
+  unique.forEach(row => { row.qualityEligible = !intelligent || row.quality != null && row.quality >= qualityFloor; });
+  const eligible = intelligent ? unique.filter(row => row.qualityEligible) : unique;
+  eligible.sort((a, b) => compare(a, b, intelligent));
+  const deals = unique.filter(row => row.discounted).sort((a, b) => compare(a, b, intelligent)).slice(0, 6);
   return {
-    best: unique[0] ?? null,
-    deals: unique.filter((row) => row.discounted).slice(0, 6),
+    best: eligible[0] ?? null,
+    deals,
     checked,
     total: (state.models ?? []).length,
+    mode: intelligent ? 'intelligent' : 'discovery',
+    qualityFloor,
   };
 }

@@ -1,52 +1,11 @@
-import { DEFAULT_SETTINGS, FRESH_MS, family, quote } from './pricing.js';
+import { DEFAULT_SETTINGS, FRESH_MS, quote } from './pricing.js';
+import { benchmarkFor, overallScore, scorePurpose } from './model-quality.js';
 
-// Family-level editorial estimates, reviewed 2026-09-08. These are NOT benchmark scores.
-// Version eligibility is determined from the full live catalog, not these ratings.
-export const REVIEWED = '2026-09-08';
-const SERIES = [
-  { key: 'glm', re: /^z-ai\/glm-(\d+(?:\.\d+)*)$/, tier: 4, role: 'Planning', why: 'Complex software plans and long agent workflows.' },
-  { key: 'glm-flash', re: /^z-ai\/glm-(\d+(?:\.\d+)*)-flash$/, tier: 3, role: 'Coding', why: 'Low-cost implementation, tests and routine agent work.' },
-  { key: 'deepseek-pro', re: /^deepseek\/deepseek-v(\d+(?:\.\d+)*)-pro(?:-(\d{4}))?$/, tier: 4, role: 'Planning', why: 'Reasoning and design trade-offs at a moderate cost.' },
-  { key: 'deepseek-flash', re: /^deepseek\/deepseek-v(\d+(?:\.\d+)*)-flash(?:-(\d{4}))?$/, tier: 3, role: 'Coding', why: 'Economical coding and repeated implementation tasks.' },
-  { key: 'gemini-flash', re: /^google\/gemini-(\d+(?:\.\d+)*)-flash(?:-preview)?$/, tier: 3, role: 'Coding', why: 'Responsive coding with multimodal context.' },
-  { key: 'gemini-pro', re: /^google\/gemini-(\d+(?:\.\d+)*)-pro(?:-preview)?$/, tier: 4, role: 'Planning', why: 'Complex reasoning over large, multimodal inputs.' },
-  { key: 'mimo', re: /^xiaomi\/mimo-v(\d+(?:\.\d+)*)$/, tier: 3, role: 'Coding', why: 'Budget implementation and multimodal agent tasks.' },
-  { key: 'mimo-pro', re: /^xiaomi\/mimo-v(\d+(?:\.\d+)*)-pro$/, tier: 4, role: 'Planning', why: 'Complex engineering and long agent tasks on a budget.' },
-  { key: 'sonnet', re: /^anthropic\/claude-sonnet-(\d+(?:\.\d+)*)$/, tier: 4, role: 'Planning', why: 'Codebase reasoning, architecture and multi-step engineering.' },
-  { key: 'opus', re: /^anthropic\/claude-opus-(\d+(?:\.\d+)*)$/, tier: 5, role: 'Planning', why: 'Demanding reasoning and critical code review.', premium: 1 },
-  { key: 'fable', re: /^anthropic\/claude-fable-(\d+(?:\.\d+)*)$/, tier: 5, role: 'Planning', why: 'Critical refactors and difficult autonomous engineering.', premium: 2 },
-];
-export function profile(model) {
-  for (const series of SERIES) {
-    const match = model.id.match(series.re);
-    if (match) return { ...series, version: [...match[1].split('.').map(Number), Number(match[2] ?? 0)] };
-  }
-  return null;
-}
-function versionCompare(a, b) {
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const difference = (a[i] ?? 0) - (b[i] ?? 0);
-    if (difference) return difference;
-  }
-  return 0;
-}
 export function eligibleCatalog(catalog) {
-  const versions = new Map();
-  for (const model of catalog) {
-    const p = profile(model);
-    if (!p) continue;
-    const list = versions.get(p.key) ?? [];
-    if (!list.some(v => versionCompare(v, p.version) === 0)) list.push(p.version);
-    versions.set(p.key, list.sort((a, b) => versionCompare(b, a)));
-  }
-  return catalog.slice(0, 200).map((model, i) => ({ ...model, popularityRank: i + 1 }))
-    .filter(model => {
-      const p = profile(model);
-      return p && versions.get(p.key).slice(0, 2).some(v => versionCompare(v, p.version) === 0);
-    }).map(model => {
-      const p = profile(model);
-      return { ...model, generation: versionCompare(versions.get(p.key)[0], p.version) === 0 ? 'Latest in series' : 'One version back' };
-    });
+  return (Array.isArray(catalog) ? catalog : []).slice(0, 200)
+    .map((model, index) => ({ ...model, popularityRank: index + 1 }))
+    .filter(model => typeof model.id === 'string' && model.id && model.pricing &&
+      !model.alias_target && !model.id.startsWith('openrouter/') && !model.id.startsWith('~'));
 }
 const positive = n => typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null;
 export function performance(endpoint, detail) {
@@ -105,12 +64,10 @@ export function nitroAdvice(quotes, base) {
   return { text: `${verdict}: ${Math.round(fast.throughput)} tok/s via ${fast.provider}; ${Number.isFinite(multiplier) ? multiplier.toFixed(1) + '×' : 'higher'} request cost.`, fast };
 }
 export function developerPicks(state, settings = DEFAULT_SETTINGS, now = new Date()) {
-  // Do not use pre-upgrade unsorted caches as a top-200 catalog.
-  const models = state.schema === 2 ? (state.models ?? []) : [];
+  const models = state.schema === 3 ? (state.models ?? []) : [];
   const rows = [];
   for (const model of models) {
-    const p = profile(model);
-    if (!p || !model.generation || !(model.popularityRank <= 200)) continue;
+    if (!(model.popularityRank <= 200)) continue;
     const detail = state.details?.[model.id];
     if (!detail || +now - detail.at >= FRESH_MS) continue;
     const quotes = detail.endpoints.filter(e => e.status === 0 &&
@@ -124,19 +81,46 @@ export function developerPicks(state, settings = DEFAULT_SETTINGS, now = new Dat
     if (!quotes.length) continue;
     quotes.sort((a, b) => a.cost - b.cost);
     const best = quotes[0];
-    const preference = family(model);
-    // Compare cost on a logarithmic scale so cheap models cannot erase the capability bar.
-    const value = p.tier * 2 - Math.log2(1 + best.cost * 1000) +
-      (preference >= 0 ? (4 - preference) * .35 : 0) + (best.discounted ? .4 : 0) +
-      (best.latency ? .5 / (1 + best.latency) : 0) + (best.throughput ? .5 * best.throughput / (best.throughput + 100) : 0);
-    rows.push({ ...model, ...best, ...p, value, nitro: nitroAdvice(quotes, best) });
+    const scores = benchmarkFor(model, state.benchmarks);
+    rows.push({ ...model, ...best, scores, quality: overallScore(scores), nitro: nitroAdvice(quotes, best) });
   }
-  rows.sort((a, b) => b.value - a.value || a.popularityRank - b.popularityRank);
-  const distinct = list => list.filter((r, i) => list.findIndex(other => other.key === r.key) === i);
-  const planning = distinct(rows.filter(r => r.role === 'Planning' && r.tier < 5)).slice(0, 2);
-  const coding = distinct(rows.filter(r => r.role === 'Coding')).slice(0, 3);
-  const shortlist = [...planning, ...coding];
-  const premium = rows.filter(r => r.tier === 5 && r.cost > Math.max(0, ...shortlist.map(s => s.cost)))
-    .sort((a, b) => (b.premium ?? 0) - (a.premium ?? 0) || versionCompare(b.version, a.version) || a.cost - b.cost)[0] ?? null;
-  return { shortlist, premium, planning, coding, assessed: models.length, reviewed: REVIEWED };
+  const benchmarked = rows.filter(row => row.quality != null).length;
+  const pick = (purpose, role, why, score) => rows.map(row => ({ row, score: score(row) }))
+    .filter(candidate => candidate.score != null && Number.isFinite(candidate.score))
+    .sort((a, b) => b.score - a.score || a.row.cost - b.row.cost || a.row.popularityRank - b.row.popularityRank)[0]?.row;
+  const decorate = (row, purpose, role, why, evidenceScore = null) => row && ({
+    ...row, purpose, role, why, evidenceScore,
+  });
+  let picks;
+  if (benchmarked) {
+    const intelligent = [
+      ['coding', 'Coding & debugging', 'Highest coding-focused benchmark result among ready top-200 models.', row => scorePurpose(row.scores, 'coding')],
+      ['planning', 'Planning & architecture', 'Highest planning-focused intelligence and agentic evidence.', row => scorePurpose(row.scores, 'planning')],
+      ['agentic', 'Agentic execution', 'Highest agentic-focused benchmark result for multi-step work.', row => scorePurpose(row.scores, 'agentic')],
+      ['value', 'Best value', 'Strong benchmark evidence after accounting for your request cost.', row => row.quality == null ? null : row.quality - 8 * Math.log2(1 + row.cost * 1000)],
+      ['critical', 'Critical work', 'Highest overall benchmark evidence; price is only a tie-breaker.', row => row.quality],
+    ];
+    picks = intelligent.map(([purpose, role, why, score]) => {
+      const row = pick(purpose, role, why, score);
+      return decorate(row, purpose, role, why, row ? score(row) : null);
+    }).filter(Boolean);
+  } else {
+    const discovery = [
+      ['popular', 'Most used', 'Highest weekly OpenRouter usage among ready models.', row => -row.popularityRank],
+      ['budget', 'Lowest request cost', 'Lowest eligible provider price for your token estimate.', row => -row.cost],
+      ['latency', 'Fastest first token', 'Lowest measured median time to first token.', row => row.latency == null ? null : -row.latency],
+      ['throughput', 'Fastest output', 'Highest measured median output throughput.', row => row.throughput],
+      ['context', 'Longest context', 'Largest advertised context window among ready models.', row => positive(row.context_length)],
+    ];
+    picks = discovery.map(([purpose, role, why, score]) => decorate(pick(purpose, role, why, score), purpose, role, why))
+      .filter(Boolean);
+  }
+  return {
+    mode: benchmarked ? 'intelligent' : 'discovery',
+    picks,
+    shortlist: picks,
+    assessed: models.length,
+    benchmarked,
+    benchmarkAsOf: benchmarked ? state.benchmarks?.asOf ?? null : null,
+  };
 }

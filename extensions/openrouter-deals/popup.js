@@ -2,9 +2,9 @@ import {
   DEFAULT_SETTINGS,
   FRESH_MS,
   recommendations,
-  FAMILIES,
 } from "./pricing.js";
 import { developerPicks } from './developer-picks.js';
+import { normalizeApiKey } from './credentials.js';
 const $ = (id) => document.getElementById(id);
 const money = (value) =>
   new Intl.NumberFormat("en-US", {
@@ -14,7 +14,8 @@ const money = (value) =>
   }).format(value);
 const percent = (value) => `${value.toFixed(1).replace(/\.0$/, "")}%`;
 let state = {},
-  settings = { ...DEFAULT_SETTINGS };
+  settings = { ...DEFAULT_SETTINGS },
+  credentialStatus = { configured: false };
 function element(tag, text, className) {
   const node = document.createElement(tag);
   if (text != null) node.textContent = text;
@@ -35,7 +36,8 @@ function render() {
     month: "long",
     day: "numeric",
   });
-  const result = recommendations({ ...state, models: state.schema === 2 ? state.models?.filter(m => m.generation) : [] }, settings);
+  const result = recommendations({ ...state, models: state.schema === 3 ? state.models : [] }, settings);
+  $('mode').textContent = result.mode === 'intelligent' ? 'INTELLIGENT MODE' : 'DISCOVERY MODE';
   const stale = !state.catalogAt || Date.now() - state.catalogAt >= FRESH_MS;
   const progress = `${result.checked}/${result.total} models checked for provider offers`;
   const time = state.catalogAt
@@ -93,7 +95,7 @@ function render() {
     $("best").append(
       element(
         "p",
-        `${row.discounted && row.family >= 0 ? `${FAMILIES[row.family]} has an active offer and leads by your preference order.` : "Lowest estimated cost among current eligible prices; your favorites break ties."} ${row.verified ? `Provider checked ${new Date(row.checkedAt).toLocaleString()}. Use the listed provider to seek this price; automatic routing may cost more.` : "Catalog estimate only; provider discount coverage is pending."}`,
+        `${result.mode === 'intelligent' ? `Benchmark quality ${row.quality?.toFixed(1)}; only models at or above today's quality floor were eligible for the highlighted deal.` : 'Discovery mode compares promotions and request cost without claiming capability.'} ${row.verified ? `Provider checked ${new Date(row.checkedAt).toLocaleString()}. Use the listed provider to seek this price; automatic routing may cost more.` : "Catalog estimate only; provider discount coverage is pending."}`,
         "reason",
       ),
       link(row, "View model & providers ↗"),
@@ -122,13 +124,14 @@ function render() {
     ? ""
     : result.checked < result.total
       ? "Checking more providers. Other verified offers will appear here."
-      : "No other verified discounts for your current preferences.";
+      : "No other verified discounts for the current eligible models.";
 }
 function pickCard(row) {
   const card = element('article', null, 'pick-card');
-  card.append(element('span', `${row.role} · ${row.tier === 5 ? 'Premium' : row.tier === 4 ? 'Higher' : 'Medium'} capability estimate`, 'eyebrow'),
-    element('h3', row.name), element('p', `#${row.popularityRank} weekly · ${row.generation}${row.created ? " · " + new Date(row.created * 1000).toLocaleDateString() : ""}`, 'provider'),
+  card.append(element('span', `${row.role}${row.evidenceScore == null ? '' : ` · benchmark fit ${row.evidenceScore.toFixed(1)}`}`, 'eyebrow'),
+    element('h3', row.name), element('p', `#${row.popularityRank} weekly${row.created ? " · " + new Date(row.created * 1000).toLocaleDateString() : ""}`, 'provider'),
     element('p', row.why, 'pick-reason'));
+  if (row.quality != null) card.append(element('p', `Average available benchmark evidence: ${row.quality.toFixed(1)} / 100.`, 'provider'));
   card.append(element('p', `${money(row.input * 1e6)} input / ${money(row.output * 1e6)} output per 1M tokens`, 'pick-price'),
     element('p', `${money(row.cost)} / your request · ${row.provider}${row.discounted ? ` · ${percent(row.percent)} off` : ''}`, 'provider'));
   card.append(element('p', `Latency: ${row.latency == null ? 'unavailable' : row.latency.toFixed(2) + 's to first token'} · Speed: ${row.throughput == null ? 'unavailable' : Math.round(row.throughput) + ' tok/s'}`, 'pick-speed'),
@@ -145,11 +148,26 @@ function pickCard(row) {
 }
 function renderDeveloperPicks() {
   const picks = developerPicks(state, settings);
-  $('pick-count').textContent = `${picks.shortlist.length}/5 ready`;
-  $('picks-status').textContent = state.schema !== 2 ? 'Updating the catalog for the new top-200 filter…' :
-    `${state.models?.filter(m => m.generation).length ?? 0} models match the reviewed families and recency rule. ${state.queue?.length ? 'Scanning providers; picks may change.' : ''}${picks.shortlist.length < 5 ? ' Fewer than five eligible, verified quotes are currently available.' : ''}`;
-  $('developer-list').replaceChildren(...picks.shortlist.map(pickCard));
-  $('premium-pick').replaceChildren(picks.premium ? pickCard(picks.premium) : element('p', 'No qualifying premium quote yet. It will appear after eligible providers are checked.', 'muted'));
+  $('pick-count').textContent = `${picks.picks.length}/5 ready`;
+  const evidence = picks.mode === 'intelligent'
+    ? `Intelligent mode uses benchmark evidence for ${picks.benchmarked} ready models${picks.benchmarkAsOf ? `, dated ${new Date(picks.benchmarkAsOf).toLocaleDateString()}` : ''}.`
+    : 'Discovery mode uses popularity, price, context and measured speed; it does not claim to measure intelligence.';
+  $('picks-status').textContent = state.schema !== 3 ? 'Updating the catalog for adaptive top-200 selection…' :
+    `${evidence} ${state.queue?.length ? 'Scanning providers; picks may change.' : ''}${state.benchmarkError ? ` ${state.benchmarkError}` : ''}${picks.picks.length < 5 ? ' Some purposes are waiting for eligible evidence.' : ''}`;
+  $('developer-list').replaceChildren(...picks.picks.map(pickCard));
+}
+function renderCredentialStatus(message = '') {
+  $('remove-key').disabled = !credentialStatus.configured;
+  $('key-status').textContent = message || (credentialStatus.configured
+    ? state.benchmarkError || 'A key is configured. The saved value is never shown. Benchmark evidence refreshes automatically.'
+    : 'No key configured. Discovery mode remains fully available.');
+}
+function clearBenchmarkState() {
+  const next = { ...state };
+  delete next.benchmarks;
+  delete next.benchmarkError;
+  delete next.benchmarkRetryAt;
+  return next;
 }
 for (const view of ['picks', 'deals']) {
   $(`show-${view}`).addEventListener('click', () => {
@@ -170,6 +188,35 @@ $("settings").addEventListener("submit", async (event) => {
   $("saved").textContent = "Saved";
   render();
 });
+$("api-key-settings").addEventListener("submit", async event => {
+  event.preventDefault();
+  let saved = false;
+  try {
+    const apiKey = normalizeApiKey($("api-key").value);
+    state = clearBenchmarkState();
+    credentialStatus = { configured: true };
+    await chrome.storage.local.set({ credentials: { apiKey }, credentialStatus, state });
+    saved = true;
+    $("api-key").value = '';
+    renderCredentialStatus('Key saved without displaying it. Checking benchmark access…');
+    render();
+  } catch (error) {
+    renderCredentialStatus(error.message || 'The key could not be saved.');
+  }
+  if (!saved) return;
+  try { await chrome.runtime.sendMessage({ type: 'credentialsChanged', force: true }); }
+  catch { renderCredentialStatus('Key saved, but the background refresh could not start. Use Refresh to retry.'); }
+});
+$("remove-key").addEventListener("click", async () => {
+  state = clearBenchmarkState();
+  credentialStatus = { configured: false };
+  await chrome.storage.local.remove(['credentials', 'credentialStatus']);
+  await chrome.storage.local.set({ state });
+  $("api-key").value = '';
+  renderCredentialStatus('Key removed. Discovery mode is active.');
+  render();
+  await chrome.runtime.sendMessage({ type: 'credentialsChanged', force: true });
+});
 $("refresh").addEventListener("click", async () => {
   $("refresh").disabled = true;
   try {
@@ -185,15 +232,22 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.state) {
     state = changes.state.newValue ?? {};
     render();
+    renderCredentialStatus();
+  }
+  if (area === 'local' && changes.credentialStatus) {
+    credentialStatus = changes.credentialStatus.newValue ?? { configured: false };
+    renderCredentialStatus();
   }
 });
 try {
-  const saved = await chrome.storage.local.get(["state", "settings"]);
+  const saved = await chrome.storage.local.get(["state", "settings", "credentialStatus"]);
   state = saved.state ?? {};
   settings = { ...DEFAULT_SETTINGS, ...saved.settings };
+  credentialStatus = saved.credentialStatus ?? { configured: false };
   $("input").value = settings.input;
   $("output").value = settings.output;
   $("free").checked = settings.includeFree;
+  renderCredentialStatus();
   render();
   await chrome.runtime.sendMessage({ type: "refresh" });
 } catch {

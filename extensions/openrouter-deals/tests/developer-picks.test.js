@@ -4,47 +4,66 @@ import { eligibleCatalog, developerPicks, parsePerformance, performance, nitroAd
 import { DEFAULT_SETTINGS, FRESH_MS } from '../pricing.js';
 const now = new Date('2026-09-08T12:00:00Z');
 const model = id => ({ id, name: id, pricing: { prompt: '.000001', completion: '.000002' } });
-test('eligibility checks versions against the full catalog before limiting to top 200', () => {
-  const catalog = [model('z-ai/glm-4'), model('z-ai/glm-5.2'), model('z-ai/glm-5.3'),
-    ...Array.from({ length: 197 }, (_, i) => model(`unknown/${i}`)), model('z-ai/glm-5.4')];
-  assert.deepEqual(eligibleCatalog(catalog).map(m => m.id), ['z-ai/glm-5.3']);
-  assert.equal(eligibleCatalog(catalog)[0].generation, 'One version back');
-  assert.equal(eligibleCatalog(catalog)[0].popularityRank, 3);
+test('eligibility accepts every valid provider in the first 200 without a family allowlist', () => {
+  const catalog = Array.from({ length: 201 }, (_, i) => model(`provider-${i}/model`));
+  catalog[3].id = '~provider/alias';
+  const result = eligibleCatalog(catalog);
+  assert.equal(result.length, 199);
+  assert.equal(result[0].id, 'provider-0/model');
+  assert.equal(result.at(-1).id, 'provider-199/model');
+  assert.equal(result.some(row => row.id === 'provider-200/model'), false);
+  assert.equal(result.find(row => row.id === 'provider-4/model').popularityRank, 5);
 });
-test('numeric versions and revisions work; aliases and unknown families are not rated', () => {
-  const list = eligibleCatalog(['google/gemini-3.8-flash', 'google/gemini-3.9-flash', 'google/gemini-3.10-flash',
-    '~google/gemini-flash-latest', 'deepseek/deepseek-v4-pro', 'deepseek/deepseek-v4-pro-0813'].map(model));
-  assert.equal(list.some(m => m.id.includes('3.8')), false);
-  assert.equal(list.find(m => m.id.includes('3.10')).generation, 'Latest in series');
-  assert.equal(list.find(m => m.id.endsWith('0813')).generation, 'Latest in series');
-  assert.equal(list.some(m => m.id.startsWith('~')), false);
-});
-function fixture() {
-  const models = eligibleCatalog(['z-ai/glm-5.3', 'z-ai/glm-5.2', 'deepseek/deepseek-v4-pro-0813',
-    'z-ai/glm-5.3-flash', 'deepseek/deepseek-v4-flash-0731', 'xiaomi/mimo-v2.5',
-    'google/gemini-3.8-flash', 'anthropic/claude-fable-5.1'].map(model));
-  const details = Object.fromEntries(models.map(m => [m.id, { at: +now, endpoints: [{ status: 0, provider_name: 'Test',
-    pricing: { prompt: m.id.includes('fable') ? '.00001' : '.000001', completion: m.id.includes('fable') ? '.00005' : '.000002' } }] }]));
-  return { schema: 2, models, details };
+function fixture(withBenchmarks = true) {
+  const ids = ['alpha/code-star', 'beta/architect', 'gamma/agent', 'delta/value', 'omega/critical'];
+  const models = eligibleCatalog(ids.map((id, index) => ({
+    ...model(id), context_length: (index + 1) * 100000,
+  })));
+  const prices = { 'alpha/code-star': .000002, 'beta/architect': .000003,
+    'gamma/agent': .0000025, 'delta/value': .0000001, 'omega/critical': .00002 };
+  const details = Object.fromEntries(models.map((m, index) => [m.id, { at: +now, endpoints: [{
+    status: 0, provider_name: 'Test', latency_last_30m: { p50: 1 + index },
+    throughput_last_30m: { p50: 50 + index * 50 },
+    pricing: { prompt: String(prices[m.id]), completion: String(prices[m.id]) },
+  }] }]));
+  const benchmarks = withBenchmarks ? { asOf: '2026-09-15T00:00:00Z', fetchedAt: +now, byModel: {
+    'alpha/code-star': { coding: 98, intelligence: 72, agentic: 82 },
+    'beta/architect': { coding: 75, intelligence: 98, agentic: 91 },
+    'gamma/agent': { coding: 86, intelligence: 84, agentic: 99 },
+    'delta/value': { coding: 84, intelligence: 80, agentic: 82 },
+    'omega/critical': { coding: 86, intelligence: 94, agentic: 93 },
+  } } : null;
+  return { schema: 3, models, details, benchmarks };
 }
-test('five distinct series, two planners, three coders and a separate higher-priced premium', () => {
+test('intelligent mode selects benchmark-backed winners for each purpose without provider rules', () => {
   const result = developerPicks(fixture(), DEFAULT_SETTINGS, now);
-  assert.equal(result.shortlist.length, 5);
-  assert.equal(result.planning.length, 2); assert.equal(result.coding.length, 3);
-  assert.equal(new Set(result.shortlist.map(r => r.key)).size, 5);
-  assert.equal(result.premium.id, 'anthropic/claude-fable-5.1');
-  assert.ok(result.shortlist.every(r => r.cost < result.premium.cost));
+  assert.equal(result.mode, 'intelligent');
+  assert.equal(result.picks.length, 5);
+  assert.deepEqual(Object.fromEntries(result.picks.map(row => [row.purpose, row.id])), {
+    coding: 'alpha/code-star', planning: 'beta/architect', agentic: 'gamma/agent',
+    value: 'delta/value', critical: 'omega/critical',
+  });
+  assert.equal(result.benchmarked, 5);
+  assert.equal(result.benchmarkAsOf, '2026-09-15T00:00:00Z');
 });
-test('live price changes alter selection; stale or unavailable quotes cannot be picks', () => {
+test('discovery mode makes only measurable market claims', () => {
+  const result = developerPicks(fixture(false), DEFAULT_SETTINGS, now);
+  assert.equal(result.mode, 'discovery');
+  assert.deepEqual(Object.fromEntries(result.picks.map(row => [row.purpose, row.id])), {
+    popular: 'alpha/code-star', budget: 'delta/value', latency: 'alpha/code-star',
+    throughput: 'omega/critical', context: 'omega/critical',
+  });
+  assert.equal(result.benchmarked, 0);
+});
+test('live price changes alter value selection; stale or unavailable quotes cannot be picks', () => {
   const state = fixture();
-  const first = developerPicks(state, DEFAULT_SETTINGS, now);
-  const id = first.coding[0].id;
-  state.details[id].endpoints[0].pricing = { prompt: '1', completion: '1' };
-  assert.notEqual(developerPicks(state, DEFAULT_SETTINGS, now).coding[0].id, id);
-  assert.equal(developerPicks(state, DEFAULT_SETTINGS, new Date(+now + FRESH_MS)).shortlist.length, 0);
-  state.details[id].endpoints[0].status = -2;
-  assert.equal(developerPicks(state, DEFAULT_SETTINGS, now).shortlist.some(r => r.id === id), false);
-  state.schema = 1; assert.equal(developerPicks(state, DEFAULT_SETTINGS, now).shortlist.length, 0);
+  assert.equal(developerPicks(state, DEFAULT_SETTINGS, now).picks.find(r => r.purpose === 'value').id, 'delta/value');
+  state.details['delta/value'].endpoints[0].pricing = { prompt: '1', completion: '1' };
+  assert.notEqual(developerPicks(state, DEFAULT_SETTINGS, now).picks.find(r => r.purpose === 'value').id, 'delta/value');
+  assert.equal(developerPicks(state, DEFAULT_SETTINGS, new Date(+now + FRESH_MS)).picks.length, 0);
+  state.details['alpha/code-star'].endpoints[0].status = -2;
+  assert.equal(developerPicks(state, DEFAULT_SETTINGS, now).picks.some(r => r.id === 'alpha/code-star'), false);
+  state.schema = 2; assert.equal(developerPicks(state, DEFAULT_SETTINGS, now).picks.length, 0);
 });
 test('table parser uses column headers, final discounted prices and milliseconds', () => {
   const html = '<table><tr><th>Provider</th><th>Input /M</th><th>Output /M</th><th>Latency</th><th>Throughput</th></tr>' +

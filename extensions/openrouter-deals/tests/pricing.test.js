@@ -31,23 +31,37 @@ test('context surcharges and permanently free prices are not promotions', () => 
   assert.equal(quote({ prompt: '0', completion: '0' }, DEFAULT_SETTINGS).discounted, false);
 });
 function stateFor(items) {
-  return { catalogAt: +now, models: items.map(([id]) => ({ id, name: id, pricing })),
+  return { catalogAt: +now, models: items.map(([id], index) => ({ id, name: id, pricing, popularityRank: index + 1 })),
     details: Object.fromEntries(items.map(([id, cost, discount = 0, status = 0]) => [id, { at: +now, endpoints: [
       { status, provider_name: 'Test', pricing: { prompt: String(cost), completion: String(cost), discount } }
     ] }])) };
 }
-test('discounted favorites rank GLM > DeepSeek > Gemini > MiMo regardless of cheaper alternatives', () => {
-  const state = stateFor([['other/free', 0], ['xiaomi/mimo', .001, .2], ['google/gemini', .002, .3],
-    ['deepseek/v4', .003, .4], ['z-ai/glm-5', .004, .5]]);
+test('daily deals rank all providers by evidence without a family preference', () => {
+  const state = stateFor([['z-ai/glm-5', .004, .5], ['new-provider/better-deal', .001, .5],
+    ['another/model', .002, .3]]);
   const result = recommendations(state, DEFAULT_SETTINGS, now);
-  assert.equal(result.best.id, 'z-ai/glm-5');
-  assert.deepEqual(result.deals.map(r => r.family), [0, 1, 2, 3]);
+  assert.equal(result.mode, 'discovery');
+  assert.equal(result.best.id, 'new-provider/better-deal');
+  assert.deepEqual(result.deals.map(r => r.id), ['new-provider/better-deal', 'z-ai/glm-5', 'another/model']);
 });
-test('without discounted favorites cheapest overall wins, with preference tie breaks', () => {
+test('without promotions the cheapest eligible model wins in discovery mode', () => {
   const state = stateFor([['z-ai/glm', .1], ['other/cheap', .001, .5], ['google/gemini', .001]]);
-  assert.equal(recommendations(state, DEFAULT_SETTINGS, now).best.id, 'google/gemini');
+  assert.equal(recommendations(state, DEFAULT_SETTINGS, now).best.id, 'other/cheap');
   state.details['other/cheap'].endpoints[0].pricing.prompt = '0';
   assert.equal(recommendations(state, DEFAULT_SETTINGS, now).best.id, 'other/cheap');
+});
+test('intelligent mode applies a benchmark quality floor before choosing the best deal', () => {
+  const state = stateFor([['strong/model', .002, .2], ['medium/model', .001, .1], ['weak/model', .0001, .9]]);
+  state.benchmarks = { byModel: {
+    'strong/model': { coding: 90, intelligence: 90, agentic: 90 },
+    'medium/model': { coding: 80, intelligence: 80, agentic: 80 },
+    'weak/model': { coding: 20, intelligence: 20, agentic: 20 },
+  } };
+  const result = recommendations(state, DEFAULT_SETTINGS, now);
+  assert.equal(result.mode, 'intelligent');
+  assert.equal(result.qualityFloor, 80);
+  assert.equal(result.best.id, 'strong/model');
+  assert.equal(result.deals.find(row => row.id === 'weak/model').qualityEligible, false);
 });
 test('unavailable providers and over-limit endpoints cannot win', () => {
   const state = stateFor([['z-ai/glm', .001, .5, -2], ['other/ok', .002]]);

@@ -1,9 +1,9 @@
 {
   "id": "openrouter-deals",
   "name": "OpenRouter Daily Deals",
-  "shortDescription": "Daily OpenRouter model deals plus five developer picks with live pricing, discounts and provider speed.",
-  "description": "A dependency-free Chrome extension (MV3) that inspects the OpenRouter catalog and surfaces daily deals alongside five computed developer picks: two planning models, three coding models and one separate premium model. It ranks candidates using live prices, active discounts, provider speed (TTFT/throughput), recency within each model series and your GLM → DeepSeek → Gemini → MiMo preference order. Every card shows per-million-token input/output prices, the cost for your selected request size, the provider, discount percentage, time to first token and throughput, with a Nitro recommendation when the faster provider is worth the premium. Everything runs locally: host access is limited to openrouter.ai, settings live in chrome.storage.local and no inference requests are ever sent.",
-  "version": "1.1.0",
+  "shortDescription": "Adaptive OpenRouter model picks and daily deals across the weekly top 200, with optional benchmark intelligence.",
+  "description": "A dependency-free Chrome extension (MV3) that evaluates OpenRouter's weekly top 200 text models without a provider allowlist. Discovery mode works without credentials and ranks live popularity, request cost, context, discounts and measured provider speed. An optional locally stored OpenRouter key enables Intelligent mode, which adds OpenRouter benchmark evidence for coding, planning, agentic execution, value and critical work. Daily Deals evaluates the full candidate pool and applies a benchmark quality floor when evidence is available. Every card shows live provider pricing, estimated request cost, latency, throughput and Nitro guidance. The key is sent only to OpenRouter's benchmark endpoint; no inference requests, analytics or remote scripts are used.",
+  "version": "1.2.0",
   "status": "stable",
   "icon": "icons/icon-128.png",
   "browserSupport": ["chrome", "edge", "brave"],
@@ -11,15 +11,16 @@
   "repositoryPath": "extensions/openrouter-deals",
   "screenshots": [],
   "features": [
-    "Developer picks: 2 planning + 3 coding models plus a separate premium choice",
-    "Daily deals view with stronger priority for discounted preferred families",
+    "Purpose-specific picks for coding, planning, agentic work, value and critical work",
+    "Discovery mode without credentials; optional benchmark-backed Intelligent mode",
+    "Daily Deals across all valid models in the weekly top 200, with no provider preference",
     "Live provider quotes: input/output prices, discount percentage, per-request cost",
     "Provider speed via the OpenRouter endpoints API with a public provider-table fallback",
     "Nitro guidance: when the fastest provider is worth the price premium",
-    "Editorial capability tiers per model family with a recency filter per series",
+    "Exact-slug benchmark matching with evidence dates and honest missing-data handling",
     "Copy the exact model ID and open the model page in one click",
     "Incremental background scanning with alarms, backoff and six-hour refresh",
-    "No API key, no analytics, no remote scripts"
+    "Optional locally stored OpenRouter key; no inference requests, analytics or remote scripts"
   ],
   "installInstructions": [
     "Download the ZIP and extract it.",

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "OpenRouter Daily Deals",
-  "version": "1.1.0",
-  "description": "Daily model deals plus five current planning/coding picks, provider speed, Nitro guidance and a premium choice.",
+  "version": "1.2.0",
+  "description": "Adaptive model picks and daily deals across OpenRouter's weekly top 200, with optional benchmark intelligence.",
   "minimum_chrome_version": "120",
   "permissions": [
     "storage",
