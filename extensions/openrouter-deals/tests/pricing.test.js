@@ -63,6 +63,15 @@ test('smarter preference ranks benchmark evidence directly', () => {
   assert.deepEqual(result.deals.map(row => row.id), ['strong/model', 'medium/model', 'weak/model']);
   assert.equal(result.qualityFloor, undefined);
 });
+test('combined daily choices retain provisional price and speed results without benchmarks', () => {
+  const state = stateFor([['cheap/model', .001, .5, 0, 2, 40], ['fast/model', .002, .5, 0, .2, 300]]);
+  const result = recommendations(state, { ...DEFAULT_SETTINGS,
+    priorities: { cheaper: true, smarter: true, faster: true } }, now);
+  assert.ok(result.best);
+  assert.equal(result.deals.length, 2);
+  assert.deepEqual(result.unavailablePreferences, ['smarter']);
+  assert.deepEqual(result.best.matchedPreferences, ['cheaper', 'faster']);
+});
 test('faster preference ranks endpoint speed and excludes missing measurements', () => {
   const state = stateFor([
     ['slow/model', .001, .5, 0, 2, 40],

@@ -1,5 +1,5 @@
 import { benchmarkFor, overallScore } from './model-quality.js';
-import { DEFAULT_PRIORITIES, normalizePriorities, rankByPreferences } from './preferences.js';
+import { availablePriorities, DEFAULT_PRIORITIES, normalizePriorities, rankByPreferences } from './preferences.js';
 
 export const DEFAULT_SETTINGS = {
   input: 1000,
@@ -160,16 +160,18 @@ export function recommendations(
     }
   }
   const priorities = normalizePriorities(settings.priorities);
-  const unique = groupByModel(rows).map(group => rankByPreferences(group, priorities)[0]).filter(Boolean);
+  const { priorities: rankingPriorities, unavailablePreferences } = availablePriorities(rows, priorities);
+  const unique = groupByModel(rows).map(group => rankByPreferences(group, rankingPriorities)[0]).filter(Boolean);
   const discounted = rows.filter(row => row.discounted);
-  const uniqueDeals = groupByModel(discounted).map(group => rankByPreferences(group, priorities)[0]).filter(Boolean);
-  const eligible = rankByPreferences(unique, priorities);
-  const deals = rankByPreferences(uniqueDeals, priorities).slice(0, 6);
+  const uniqueDeals = groupByModel(discounted).map(group => rankByPreferences(group, rankingPriorities)[0]).filter(Boolean);
+  const eligible = rankByPreferences(unique, rankingPriorities);
+  const deals = rankByPreferences(uniqueDeals, rankingPriorities).slice(0, 6);
   return {
     best: eligible[0] ?? null,
     deals,
     checked,
     total: (state.models ?? []).length,
     priorities,
+    unavailablePreferences,
   };
 }

@@ -13,6 +13,23 @@ export function normalizePriorities(value) {
   return KEYS.some(key => priorities[key]) ? priorities : { ...DEFAULT_PRIORITIES };
 }
 
+export function availablePriorities(rows, value) {
+  const requested = normalizePriorities(value);
+  const unavailablePreferences = [];
+  const priorities = { ...requested };
+  if (requested.smarter && !rows.some(row => finite(row.quality))) {
+    priorities.smarter = false;
+    unavailablePreferences.push('smarter');
+  }
+  if (requested.faster && !rows.some(row => positive(row.latency) || positive(row.throughput))) {
+    priorities.faster = false;
+    unavailablePreferences.push('faster');
+  }
+  // Keep a single selected choice strict: there is no honest ranking without its evidence.
+  if (!Object.values(priorities).some(Boolean)) return { priorities: requested, unavailablePreferences };
+  return { priorities, unavailablePreferences };
+}
+
 function normalized(value, values, lowerIsBetter = false) {
   const min = Math.min(...values);
   const max = Math.max(...values);

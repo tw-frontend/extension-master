@@ -59,6 +59,27 @@ test('smarter and faster preferences use their own evidence', () => {
     ...DEFAULT_SETTINGS, priorities: { smarter: true },
   }, now).picks.length, 0);
 });
+test('combined choices show provisional matches when all benchmark evidence is absent', () => {
+  const result = developerPicks(fixture(false), {
+    ...DEFAULT_SETTINGS, priorities: { cheaper: true, smarter: true, faster: true },
+  }, now);
+  assert.equal(result.picks.length, 5);
+  assert.deepEqual(result.unavailablePreferences, ['smarter']);
+  assert.deepEqual(result.picks[0].matchedPreferences, ['cheaper', 'faster']);
+  assert.equal(result.picks[0].preferenceBreakdown.smarter, undefined);
+});
+test('all three choices retain provisional price matches when speed and quality are absent', () => {
+  const state = fixture(false);
+  for (const detail of Object.values(state.details)) {
+    delete detail.endpoints[0].latency_last_30m;
+    delete detail.endpoints[0].throughput_last_30m;
+  }
+  const result = developerPicks(state, { ...DEFAULT_SETTINGS,
+    priorities: { cheaper: true, smarter: true, faster: true } }, now);
+  assert.equal(result.picks.length, 5);
+  assert.deepEqual(result.unavailablePreferences, ['smarter', 'faster']);
+  assert.deepEqual(result.picks[0].matchedPreferences, ['cheaper']);
+});
 test('faster preference skips models whose providers have no speed evidence', () => {
   const state = fixture();
   for (const detail of Object.values(state.details)) {

@@ -1,6 +1,6 @@
 import { DEFAULT_SETTINGS, FRESH_MS, quote } from './pricing.js';
 import { benchmarkFor, overallScore } from './model-quality.js';
-import { normalizePriorities, rankByPreferences } from './preferences.js';
+import { availablePriorities, normalizePriorities, rankByPreferences } from './preferences.js';
 
 export function eligibleCatalog(catalog) {
   return (Array.isArray(catalog) ? catalog : []).slice(0, 200)
@@ -81,10 +81,11 @@ export function developerPicks(state, settings = DEFAULT_SETTINGS, now = new Dat
         return q && { ...q, ...performance(e, detail), provider: e.provider_name || e.name, tag: e.tag };
       }).filter(q => q && (settings.includeFree || q.cost > 0));
     if (!quotes.length) continue;
+    const providerHasSpeed = quotes.some(row => row.latency != null || row.throughput != null);
     const providerPriorities = {
-      cheaper: priorities.cheaper || !priorities.faster,
+      cheaper: priorities.cheaper || !priorities.faster || !providerHasSpeed,
       smarter: false,
-      faster: priorities.faster,
+      faster: priorities.faster && providerHasSpeed,
     };
     const best = rankByPreferences(quotes.map((row, index) => ({
       ...row, id: `${model.id}:${index}`, popularityRank: index + 1,
@@ -95,13 +96,15 @@ export function developerPicks(state, settings = DEFAULT_SETTINGS, now = new Dat
       scores, quality: overallScore(scores), nitro: nitroAdvice(quotes, best) });
   }
   const benchmarked = rows.filter(row => row.quality != null).length;
-  const picks = rankByPreferences(rows, priorities).slice(0, 5);
+  const { priorities: rankingPriorities, unavailablePreferences } = availablePriorities(rows, priorities);
+  const picks = rankByPreferences(rows, rankingPriorities).slice(0, 5);
   return {
     picks,
     shortlist: picks,
     assessed: models.length,
     benchmarked,
     priorities,
+    unavailablePreferences,
     benchmarkAsOf: benchmarked ? state.benchmarks?.asOf ?? null : null,
   };
 }

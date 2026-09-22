@@ -35,6 +35,9 @@ function priorityText(priorities) {
   return Object.entries(normalizePriorities(priorities))
     .filter(([, selected]) => selected).map(([key]) => PRIORITY_LABELS[key]).join(' + ');
 }
+function missingEvidenceText(keys) {
+  return keys.map(key => PRIORITY_LABELS[key]).join(' and ');
+}
 function scoreText(row) {
   return Object.entries(row.preferenceBreakdown ?? {})
     .map(([key, score]) => `${PRIORITY_LABELS[key]} ${Math.round(score * 100)}%`).join(' · ');
@@ -59,6 +62,11 @@ function render() {
     state.queue?.length && !state.error && !stale,
   );
   $("count").textContent = `${result.deals.length} found`;
+  $('deal-evidence').textContent = result.unavailablePreferences.length
+    ? result.best
+      ? `Provisional: ${missingEvidenceText(result.unavailablePreferences)} evidence is unavailable. Ranked by ${priorityText(result.best.matchedPreferences)}.${result.unavailablePreferences.includes('smarter') ? ' Add an OpenRouter key to include Smarter.' : ''}`
+      : `No ${missingEvidenceText(result.unavailablePreferences)} evidence is available for the selected ranking.`
+    : '';
   $("best").replaceChildren();
   const row = result.best;
   if (!row)
@@ -105,7 +113,7 @@ function render() {
     $("best").append(
       element(
         "p",
-        `Preference fit ${Math.round(row.preferenceScore * 100)}%: ${scoreText(row)}. ${row.verified ? `Provider checked ${new Date(row.checkedAt).toLocaleString()}. Use the listed provider to seek this price; automatic routing may cost more.` : "Catalog estimate only; provider discount coverage is pending."}`,
+        `${result.unavailablePreferences.length ? 'Provisional fit' : 'Preference fit'} ${Math.round(row.preferenceScore * 100)}%: ${scoreText(row)}. ${row.verified ? `Provider checked ${new Date(row.checkedAt).toLocaleString()}. Use the listed provider to seek this price; automatic routing may cost more.` : "Catalog estimate only; provider discount coverage is pending."}`,
         "reason",
       ),
       link(row, "View model & providers ↗"),
@@ -136,9 +144,9 @@ function render() {
       ? "Checking more providers. Other verified offers will appear here."
       : "No other verified discounts for the current eligible models.";
 }
-function pickCard(row, index) {
+function pickCard(row, index, provisional = false) {
   const card = element('article', null, 'pick-card');
-  card.append(element('span', `MATCH ${index + 1} · ${Math.round(row.preferenceScore * 100)}% FIT`, 'eyebrow'),
+  card.append(element('span', `${provisional ? 'PROVISIONAL' : 'MATCH'} ${index + 1} · ${Math.round(row.preferenceScore * 100)}% FIT`, 'eyebrow'),
     element('h3', row.name), element('p', `#${row.popularityRank} weekly${row.created ? " · " + new Date(row.created * 1000).toLocaleDateString() : ""}`, 'provider'),
     element('p', scoreText(row), 'pick-reason'));
   if (row.quality != null) card.append(element('p', `Average available benchmark evidence: ${row.quality.toFixed(1)} / 100.`, 'provider'));
@@ -158,14 +166,16 @@ function pickCard(row, index) {
 }
 function renderDeveloperPicks() {
   const picks = developerPicks(state, settings);
-  $('pick-count').textContent = `${picks.picks.length}/5 ready`;
+  $('pick-count').textContent = `${picks.picks.length}/5 ${picks.unavailablePreferences.length && picks.picks.length ? 'provisional' : 'ready'}`;
   const smartSelected = picks.priorities.smarter;
-  const evidence = smartSelected && !picks.benchmarked
-    ? 'Smarter is selected, but no benchmark evidence is available. Add a key or choose another preference.'
+  const evidence = picks.unavailablePreferences.length
+    ? picks.picks.length
+      ? `No ${missingEvidenceText(picks.unavailablePreferences)} evidence is available. These are provisional matches ranked by ${priorityText(picks.picks[0].matchedPreferences)}.${picks.unavailablePreferences.includes('smarter') ? ' Add an OpenRouter key to include Smarter.' : ''}`
+      : `No ${missingEvidenceText(picks.unavailablePreferences)} evidence is available for the selected ranking.${smartSelected ? ' Add an OpenRouter key for Smarter.' : ''}`
     : `Ranking by ${priorityText(picks.priorities)}${smartSelected && picks.benchmarkAsOf ? ` with benchmark data dated ${new Date(picks.benchmarkAsOf).toLocaleDateString()}` : ''}.`;
   $('picks-status').textContent = state.schema !== 3 ? 'Updating the catalog for adaptive top-200 selection…' :
     `${evidence} ${state.queue?.length ? 'Scanning providers; matches may change.' : ''}${state.benchmarkError ? ` ${state.benchmarkError}` : ''}${picks.picks.length < 5 ? ' Some matches are waiting for complete selected evidence.' : ''}`;
-  $('developer-list').replaceChildren(...picks.picks.map(pickCard));
+  $('developer-list').replaceChildren(...picks.picks.map((row, index) => pickCard(row, index, picks.unavailablePreferences.length > 0)));
 }
 function renderCredentialStatus(message = '') {
   $('remove-key').disabled = !credentialStatus.configured;

@@ -72,8 +72,10 @@ encrypted secret vault**. Use a dedicated key with a conservative limit.
 - Authentication, rate-limit, malformed-response, or network failures do not
   block catalog, price, or provider scanning.
 
-If Smarter is selected without benchmark evidence, the extension displays an
-honest missing-data state instead of guessing intelligence from popularity.
+If Smarter is selected without benchmark evidence, a Smarter-only selection
+shows a missing-data state. Combined selections show provisional results ranked
+by the available selected evidence, with a clear notice that intelligence has
+not been assessed. Adding a key enables the complete combined ranking.
 
 ## Prices, discounts, and speed
 

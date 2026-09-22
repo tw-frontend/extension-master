@@ -36,6 +36,13 @@ extension from silently ignoring a user's choice. The selected dimension
 scores are averaged, then request cost, weekly popularity, and model ID provide
 deterministic tie-breakers.
 
+If no model has evidence for a selected dimension and another selected
+dimension does have evidence, show provisional matches scored only by the
+available selected dimensions. Label both views as provisional and name the
+missing dimensions. A sole preference remains empty until its evidence is
+available. When evidence exists for a dimension, require it for models ranked
+under that preference.
+
 Developer Picks shows the five highest-ranked matches for the selected
 preferences. Daily Deals uses the same ranking for its highlighted model and
 orders verified discounted models by the same preferences. No provider or
