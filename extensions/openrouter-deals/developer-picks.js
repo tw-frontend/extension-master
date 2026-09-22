@@ -2,13 +2,9 @@ import { DEFAULT_SETTINGS, FRESH_MS, quote } from './pricing.js';
 import { benchmarkFor, overallScore } from './model-quality.js';
 import { availablePriorities, normalizePriorities, rankByPreferences } from './preferences.js';
 import { speedFor } from './speed-ranks.js';
+import { eligibleCatalog } from './model-eligibility.js';
 
-export function eligibleCatalog(catalog) {
-  return (Array.isArray(catalog) ? catalog : []).slice(0, 200)
-    .map((model, index) => ({ ...model, popularityRank: index + 1 }))
-    .filter(model => typeof model.id === 'string' && model.id && model.pricing &&
-      !model.alias_target && !model.id.startsWith('openrouter/') && !model.id.startsWith('~'));
-}
+export { eligibleCatalog } from './model-eligibility.js';
 const positive = n => typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null;
 export function performance(endpoint, detail) {
   const scrape = (detail.performance ?? []).filter(row =>
@@ -66,7 +62,7 @@ export function nitroAdvice(quotes, base) {
   return { text: `${verdict}: ${Math.round(fast.throughput)} tok/s via ${fast.provider}; ${Number.isFinite(multiplier) ? multiplier.toFixed(1) + '×' : 'higher'} request cost.`, fast };
 }
 export function developerPicks(state, settings = DEFAULT_SETTINGS, now = new Date()) {
-  const models = state.schema === 3 ? (state.models ?? []) : [];
+  const models = state.schema === 4 ? eligibleCatalog(state.models ?? []) : [];
   const priorities = normalizePriorities(settings.priorities);
   const rows = [];
   for (const model of models) {

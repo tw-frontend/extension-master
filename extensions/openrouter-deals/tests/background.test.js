@@ -12,13 +12,13 @@ test('scan checkpoints batches and resumes, including models outside preferences
   globalThis.fetch = async url => {
     calls.push(url);
     return { ok: true, async json() { return { data: url.includes('/models?')
-      ? [...Array.from({ length: 20 }, (_, i) => model(`other/model-${i}`)), model('z-ai/glm')]
+      ? [...Array.from({ length: 20 }, (_, i) => model(`openai/model-${i}`)), model('z-ai/glm')]
       : { endpoints: [] } }; } };
   };
   await scan();
   assert.equal(db.state.queue.length, 3);
-  assert.ok(calls.some(url => /other\/model-0\/endpoints$/.test(url)));
-  assert.ok(db.state.speedRanks.byModel['other/model-0'] != null);
+  assert.ok(calls.some(url => /openai\/model-0\/endpoints$/.test(url)));
+  assert.ok(db.state.speedRanks.byModel['openai/model-0'] != null);
   await scan();
   assert.equal(db.state.queue.length, 0);
   assert.equal(Object.keys(db.state.details).length, 21);
@@ -38,7 +38,7 @@ test('429 backs off without losing pending work; failed catalog preserves cache'
   await scan(true);
   assert.equal(db.state.models[0].id, 'a/b'); assert.equal(db.state.error, 'offline');
 });
-test('upgrade refreshes old caches and keeps top-200 ranks without family filtering', async () => {
+test('upgrade refreshes old caches and keeps only recent allowed top-200 models', async () => {
   db = { state: { models: [], catalogAt: Date.now(), details: {}, queue: [] } };
   const catalog = [model('z-ai/glm-4'), model('z-ai/glm-5.2'), model('z-ai/glm-5.3'),
     ...Array.from({ length: 197 }, (_, i) => model(`other/${i}`)), model('z-ai/glm-5.4')];
@@ -47,27 +47,37 @@ test('upgrade refreshes old caches and keeps top-200 ranks without family filter
     return { data: { endpoints: [] } };
   } });
   await scan();
-  assert.equal(db.state.schema, 3); assert.equal(db.state.models.length, 200);
+  assert.equal(db.state.schema, 4); assert.equal(db.state.models.length, 2);
   assert.equal(db.state.models.find(m => m.id === 'z-ai/glm-5.3').popularityRank, 3);
   assert.equal(db.state.models.find(m => m.id === 'z-ai/glm-5.2').popularityRank, 2);
+  assert.equal(db.state.models.some(m => m.id === 'z-ai/glm-4'), false);
   assert.equal(db.state.models.some(m => m.id === 'z-ai/glm-5.4'), false);
 });
+test('scan checks free routes first so the Free view fills early', async () => {
+  db = {};
+  globalThis.fetch = async url => ({ ok: true, async json() { return { data: url.includes('/models?')
+    ? [...Array.from({ length: 20 }, (_, index) => model(`openai/model-${index}`)), model('qwen/qwen3.8-27b:free')]
+    : { endpoints: [] } }; } });
+  await scan();
+  assert.ok(db.state.details['qwen/qwen3.8-27b:free']);
+  assert.equal(db.state.queue.length, 3);
+});
 test('selecting faster backfills missing provider performance once per refresh window', async () => {
-  const row = model('speed/model');
-  db = { settings: { priorities: { faster: true } }, state: { schema: 3, models: [{ ...row, popularityRank: 1 }],
-    catalogAt: Date.now(), queue: [], details: { 'speed/model': { at: Date.now(), endpoints: [{
+  const row = model('z-ai/glm');
+  db = { settings: { priorities: { faster: true } }, state: { schema: 4, models: [{ ...row, popularityRank: 1 }],
+    catalogAt: Date.now(), queue: [], details: { 'z-ai/glm': { at: Date.now(), endpoints: [{
       status: 0, provider_name: 'Demo', pricing: { prompt: '.000001', completion: '.000002' },
     }] } } } };
   calls = [];
   globalThis.fetch = async url => {
     calls.push(url);
-    if (url.endsWith('/speed/model')) return { ok: true, async text() { return '<html>No provider table</html>'; } };
+    if (url.endsWith('/z-ai/glm')) return { ok: true, async text() { return '<html>No provider table</html>'; } };
     return { ok: true, async json() { return { data: { endpoints: [{ status: 0, provider_name: 'Demo',
       pricing: { prompt: '.000001', completion: '.000002' } }] } }; } };
   };
   await scan();
-  assert.equal(calls.some(url => url.endsWith('/speed/model')), true);
-  assert.ok(db.state.details['speed/model'].performanceCheckedAt);
+  assert.equal(calls.some(url => url.endsWith('/z-ai/glm')), true);
+  assert.ok(db.state.details['z-ai/glm'].performanceCheckedAt);
   calls = [];
   await scan();
   assert.equal(calls.length, 0);

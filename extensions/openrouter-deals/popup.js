@@ -49,9 +49,10 @@ function render() {
     month: "long",
     day: "numeric",
   });
-  const result = recommendations({ ...state, models: state.schema === 3 ? state.models : [] }, settings);
-  $('priority-summary').textContent = $('deals-view').hidden
-    ? `PICKS: ${priorityText(settings.priorities).toUpperCase()}` : 'DAILY: BALANCED';
+  const result = recommendations({ ...state, models: state.schema === 4 ? state.models : [] }, settings);
+  renderFreeModels(result.freeModels);
+  $('priority-summary').textContent = !$('free-view').hidden ? 'FREE: RANKED'
+    : $('deals-view').hidden ? `PICKS: ${priorityText(settings.priorities).toUpperCase()}` : 'DAILY: BALANCED';
   const stale = !state.catalogAt || Date.now() - state.catalogAt >= FRESH_MS;
   const progress = `${result.checked}/${result.total} models checked for provider offers`;
   const time = state.catalogAt
@@ -163,6 +164,23 @@ function pickCard(row, index, provisional = false) {
   actions.append(link(row, 'Model & providers ↗'), copy); card.append(actions);
   return card;
 }
+function renderFreeModels(rows) {
+  $('free-count').textContent = `${rows.length} found`;
+  $('free-empty').textContent = rows.length ? '' :
+    'No verified free model from the selected makers is available yet. Refresh to check providers.';
+  $('free-list').replaceChildren(...rows.map((row, index) => {
+    const card = element('article', null, 'pick-card');
+    const score = row.quality == null && row.speedScore == null
+      ? 'EVIDENCE PENDING' : `${Math.round(row.freeScore)}% SCORE`;
+    card.append(element('span', `FREE ${index + 1} · ${score}`, 'eyebrow'),
+      element('h3', row.name),
+      element('p', `#${row.popularityRank} weekly · ${row.provider}`, 'provider'),
+      element('p', `Benchmark quality: ${row.quality == null ? 'unavailable' : row.quality.toFixed(1) + '/100'} · Relative speed: ${row.speedScore == null ? 'unavailable' : Math.round(row.speedScore * 100) + '/100'}`, 'pick-reason'),
+      element('p', '$0 input / $0 output for the selected provider · provider limits may apply', 'pick-price'),
+      link(row, 'Model & providers ↗'));
+    return card;
+  }));
+}
 function renderDeveloperPicks() {
   const picks = developerPicks(state, settings);
   $('pick-count').textContent = `${picks.picks.length}/5 ${picks.unavailablePreferences.length && picks.picks.length ? 'provisional' : 'ready'}`;
@@ -172,7 +190,7 @@ function renderDeveloperPicks() {
       ? `No ${missingEvidenceText(picks.unavailablePreferences)} evidence is available. These are provisional matches ranked by ${priorityText(picks.picks[0].matchedPreferences)}.`
       : `No ${missingEvidenceText(picks.unavailablePreferences)} evidence is available for the selected ranking. Refresh to retry the catalog and speed rankings.`
     : `Ranking by ${priorityText(picks.priorities)}${smartSelected && picks.benchmarkAsOf ? ` with benchmark data dated ${new Date(picks.benchmarkAsOf).toLocaleDateString()}` : ''}.`;
-  $('picks-status').textContent = state.schema !== 3 ? 'Updating the catalog for adaptive top-200 selection…' :
+  $('picks-status').textContent = state.schema !== 4 ? 'Updating the catalog for selected makers and recent versions…' :
     `${evidence} ${state.queue?.length ? 'Scanning providers; matches may change.' : ''}${state.benchmarkError ? ` ${state.benchmarkError}` : ''}${picks.picks.length < 5 ? ' Some matches are waiting for complete selected evidence.' : ''}`;
   $('developer-list').replaceChildren(...picks.picks.map((row, index) => pickCard(row, index, picks.unavailablePreferences.length > 0)));
 }
@@ -189,11 +207,12 @@ function clearBenchmarkState() {
   delete next.benchmarkRetryAt;
   return next;
 }
-for (const view of ['picks', 'deals']) {
+for (const view of ['picks', 'deals', 'free']) {
   $(`show-${view}`).addEventListener('click', () => {
-    $('developer-view').hidden = view !== 'picks'; $('deals-view').hidden = view !== 'deals';
-    $('show-picks').setAttribute('aria-pressed', String(view === 'picks'));
-    $('show-deals').setAttribute('aria-pressed', String(view === 'deals'));
+    for (const [name, section] of [['picks', 'developer-view'], ['deals', 'deals-view'], ['free', 'free-view']]) {
+      $(section).hidden = view !== name;
+      $(`show-${name}`).setAttribute('aria-pressed', String(view === name));
+    }
     render();
   });
 }

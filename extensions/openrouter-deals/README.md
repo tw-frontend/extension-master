@@ -1,7 +1,7 @@
 # OpenRouter Daily Deals
 
 A dependency-free Chromium extension that evaluates OpenRouter's weekly top
-200 text models. Each user customizes **Developer picks** with three combinable
+200 text models from OpenAI, Anthropic, Z.ai, Xiaomi, Qwen, Google and DeepSeek. Each user customizes **Developer picks** with three combinable
 preferences:
 
 - **Cheaper** — lower estimated request cost ranks higher.
@@ -10,7 +10,9 @@ preferences:
   higher.
 
 **Daily deals** always recommends a balanced model independently of these
-checkboxes. There are no hardcoded provider orders or model-family allowlists.
+checkboxes. Each recognizable model family is limited to its two newest
+versions in the weekly top 200 (for example, Opus 5 and 4.8). **Top free** lists
+verified zero-cost models from the same pool, ranked by quality and speed.
 Selected choices receive equal weight in Developer Picks and persist in the
 browser profile.
 
@@ -34,8 +36,10 @@ running.
 
 The worker fetches
 `GET /api/v1/models?output_modalities=text&sort=top-weekly`, takes the first 200
-entries, then removes aliases, automatic routers, and malformed records. Every
-remaining provider and family is eligible.
+entries, then removes aliases, malformed records, makers outside the requested
+seven, and older versions within each recognizable model family. The original
+top-200 cutoff is applied before filtering, and newer versions outside that
+cutoff do not replace weekly favorites.
 
 For each selected preference, the extension normalizes current evidence across
 eligible models:

@@ -19,8 +19,11 @@ credentials or performance coverage.
 
 ## Recommendation contract
 
-The candidate universe is the first 200 valid, non-router text models from
-`GET /api/v1/models?output_modalities=text&sort=top-weekly`.
+The candidate universe starts with the first 200 text models from
+`GET /api/v1/models?output_modalities=text&sort=top-weekly`. Only OpenAI,
+Anthropic, Z.ai, Xiaomi, Qwen, Google and DeepSeek are compared. For each
+recognizable model family, the two newest versions in that weekly pool remain
+eligible. For example, Opus 5 and 4.8 remain while 4.7 and 4.6 do not.
 
 Each selected preference is normalized across the currently eligible models:
 
@@ -46,7 +49,13 @@ preferences. Daily Deals ignores the checkboxes and weights quality 50%,
 relative speed 30%, and request cost 20%. It highlights a model from the
 stronger quality half, outside the slowest speed quarter, and below the upper
 price quartile among usable models. Verified discounted alternatives remain
-visible. No provider or model family receives a hardcoded bonus.
+visible. The allowed makers and version limit determine eligibility; none
+receives a ranking bonus.
+
+Top Free lists currently available zero-cost provider routes in the same
+eligible pool. It sorts by benchmark quality (65%) and relative speed (35%),
+then weekly popularity, independently of the include-free setting for the two
+main views. Missing evidence contributes no score and remains labeled missing.
 
 ## Data and interfaces
 
@@ -117,12 +126,12 @@ strings are never inserted with `innerHTML`.
 
 Tests must cover:
 
-- arbitrary providers entering the top-200 candidate pool;
+- an excluded maker entering the top-200 candidate pool;
 - single-preference and combined-preference ranking;
 - exclusion when a selected preference lacks evidence;
 - deterministic fallback when settings are absent or tampered with;
 - Developer Picks using the user's preferences while Daily Deals stays fixed;
-- no provider-family preference in either view;
+- no ranking bonus for any eligible maker or family;
 - benchmark authentication without key leakage and graceful failure;
 - saving, replacing, and removing credentials without echoing the saved key.
 
@@ -148,7 +157,7 @@ Tests must cover:
 - Public catalog scores support Smarter without a key; missing benchmark evidence
   produces an honest missing-data state rather than an intelligence guess.
 - Public relative speed ranks support Faster when provider medians are absent.
-- Any valid model in the top 200 can win from its evidence.
+- Any eligible recent model from the seven selected makers can win from its evidence.
 - Automated tests, syntax checks, extension validation, and browser smoke
   verification pass.
 

@@ -36,18 +36,19 @@ export async function scan(force = false) {
   let { state = {}, credentials = {}, settings = {} } = await chrome.storage.local.get(["state", "credentials", "settings"]);
   if (!force && state.retryAt > Date.now()) return;
   try {
-    if (force || state.schema !== 3 || !state.catalogAt || Date.now() - state.catalogAt >= FRESH_MS) {
+    if (force || state.schema !== 4 || !state.catalogAt || Date.now() - state.catalogAt >= FRESH_MS) {
       const { data } = await getJSON("/models?output_modalities=text&sort=top-weekly");
       if (!Array.isArray(data) || !data.length)
         throw new Error("Empty or malformed model catalog");
       const models = eligibleCatalog(data);
       state = {
         models,
-        schema: 3,
+        schema: 4,
         catalogSize: data.length,
         catalogAt: Date.now(),
         details: {},
-        queue: models.map((m) => m.id),
+        queue: models.map((m) => m.id).sort((a, b) =>
+          Number(b.endsWith(':free')) - Number(a.endsWith(':free'))),
         failures: 0,
         error: null,
         benchmarks: state.benchmarks,
@@ -95,7 +96,8 @@ export async function scan(force = false) {
         state.queue = [...(state.queue ?? [])].sort((a, b) => {
           const left = state.models.find(model => model.id === a);
           const right = state.models.find(model => model.id === b);
-          return Number(Boolean(benchmarkFor(right, state.benchmarks))) - Number(Boolean(benchmarkFor(left, state.benchmarks)));
+          return Number(b.endsWith(':free')) - Number(a.endsWith(':free')) ||
+            Number(Boolean(benchmarkFor(right, state.benchmarks))) - Number(Boolean(benchmarkFor(left, state.benchmarks)));
         });
       } catch (error) {
         delete state.benchmarks;
@@ -105,7 +107,7 @@ export async function scan(force = false) {
       await chrome.storage.local.set({ state });
     }
     const hasSpeedRanks = Object.keys(state.speedRanks?.byModel ?? {}).length > 0;
-    if (settings.priorities?.faster && !hasSpeedRanks && state.schema === 3) {
+    if (settings.priorities?.faster && !hasSpeedRanks && state.schema === 4) {
       const performanceQueue = state.models.filter(model => {
         const detail = state.details?.[model.id];
         return detail && Date.now() - detail.at < FRESH_MS &&

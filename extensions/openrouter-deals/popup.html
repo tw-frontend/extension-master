@@ -34,15 +34,16 @@
       <nav class="tabs" aria-label="Recommendation views">
         <button id="show-picks" aria-pressed="true">Developer picks</button>
         <button id="show-deals" aria-pressed="false">Daily deals</button>
+        <button id="show-free" aria-pressed="false">Top free</button>
       </nav>
       <section id="developer-view">
         <div class="section-title"><h2>Your top matches</h2><span id="pick-count"></span></div>
-        <p class="muted">Five personalized matches across the top 200 models by weekly OpenRouter usage.</p>
+        <p class="muted">Five personalized matches from seven selected makers and recent model versions in OpenRouter's weekly top 200.</p>
         <p id="picks-status" role="status" class="muted"></p>
         <div id="developer-list"></div>
         <details><summary>How these recommendations work</summary>
           <p>Cheaper uses your estimated request cost. Smarter uses OpenRouter benchmark evidence in the public model catalog. Faster uses OpenRouter's relative model ordering by latency and throughput, with provider measurements when available. Selected choices have equal weight here.</p>
-          <p>Every valid model in the weekly top 200 can qualify. There is no preferred provider list or family bonus. Missing evidence stays missing instead of being guessed from a model name or description.</p>
+          <p>Only OpenAI, Anthropic, Z.ai, Xiaomi, Qwen, Google and DeepSeek models in the weekly top 200 qualify. For each recognizable model family, only its two newest versions are compared. Missing evidence stays missing instead of being guessed from a model name or description.</p>
           <p>Nitro sorts eligible providers by output throughput. It does not increase intelligence or necessarily reduce startup latency. Compare the shown provider and price before switching; use latency routing for faster first tokens.</p>
           <p>Speed ranks compare models, while any displayed latency and throughput values describe the listed provider. Missing or ambiguous provider measurements stay unavailable. Speed is not a guarantee for your own requests.</p>
         </details>
@@ -61,6 +62,12 @@
       </div>
       <ol id="deals"></ol>
       <p id="empty" class="muted"></p>
+      </section>
+      <section id="free-view" hidden>
+        <div class="section-title"><h2>Top free models</h2><span id="free-count"></span></div>
+        <p class="muted">Available free models from the selected makers, ranked by benchmark quality (65%) and relative speed (35%). Weekly popularity breaks ties. Free provider capacity and limits can change.</p>
+        <div id="free-list"></div>
+        <p id="free-empty" class="muted"></p>
       </section>
       <details>
         <summary>Your request estimate</summary>
@@ -85,7 +92,7 @@
             /></label>
           </div>
           <label class="check"
-            ><input id="free" type="checkbox" /> Include free models</label
+            ><input id="free" type="checkbox" /> Include free models in picks and daily deals</label
           ><button type="submit">Save preferences</button
           ><span id="saved" role="status"></span>
         </form>

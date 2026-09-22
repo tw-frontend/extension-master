@@ -1,6 +1,7 @@
 import { benchmarkFor, overallScore } from './model-quality.js';
 import { DEFAULT_PRIORITIES, rankBalanced, rankByPreferences } from './preferences.js';
 import { speedFor } from './speed-ranks.js';
+import { eligibleCatalog } from './model-eligibility.js';
 
 export const DEFAULT_SETTINGS = {
   input: 1000,
@@ -94,8 +95,10 @@ export function recommendations(
   now = new Date(),
 ) {
   const rows = [];
+  const freeRows = [];
   let checked = 0;
-  for (const model of state.models ?? []) {
+  const models = eligibleCatalog(state.models ?? []);
+  for (const model of models) {
     const detail = state.details?.[model.id];
     const fresh = detail && now.getTime() - detail.at < FRESH_MS;
     if (fresh) checked++;
@@ -146,9 +149,9 @@ export function recommendations(
         });
     }
     for (const candidate of candidates) {
-      if (settings.includeFree || candidate.cost > 0) {
+      if (settings.includeFree || candidate.cost > 0 || candidate.cost === 0 && candidate.verified) {
         const scores = benchmarkFor(model, state.benchmarks);
-        rows.push({
+        const row = {
           ...candidate,
           id: model.id,
           name: model.name,
@@ -157,7 +160,9 @@ export function recommendations(
           speedScore: speedFor(model, state.speedRanks),
           latency: amount(candidate.latency_last_30m?.p50),
           throughput: amount(candidate.throughput_last_30m?.p50),
-        });
+        };
+        if (candidate.cost === 0 && candidate.verified) freeRows.push(row);
+        if (settings.includeFree || candidate.cost > 0) rows.push(row);
       }
     }
   }
@@ -167,11 +172,15 @@ export function recommendations(
   const uniqueDeals = groupByModel(discounted).map(cheapestProvider).filter(Boolean);
   const { best, unavailablePreferences } = rankBalanced(unique);
   const { ranked: deals } = rankBalanced(uniqueDeals);
+  const freeModels = groupByModel(freeRows).map(cheapestProvider).filter(Boolean)
+    .map(row => ({ ...row, freeScore: (row.quality ?? 0) * 0.65 + (row.speedScore ?? 0) * 35 }))
+    .sort((a, b) => b.freeScore - a.freeScore || a.popularityRank - b.popularityRank || a.id.localeCompare(b.id));
   return {
     best,
     deals: deals.slice(0, 6),
+    freeModels: freeModels.slice(0, 10),
     checked,
-    total: (state.models ?? []).length,
+    total: models.length,
     priorities: { cheaper: true, smarter: true, faster: true },
     unavailablePreferences,
   };
