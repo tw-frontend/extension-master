@@ -59,6 +59,27 @@ test('smarter and faster preferences use their own evidence', () => {
     ...DEFAULT_SETTINGS, priorities: { smarter: true },
   }, now).picks.length, 0);
 });
+test('every individual and combined choice returns matches from public catalog evidence', () => {
+  const state = fixture(false);
+  state.models.forEach((model, index) => {
+    model.benchmarks = { artificial_analysis: { intelligence_index: 50 + index * 8 } };
+    delete state.details[model.id].endpoints[0].latency_last_30m;
+    delete state.details[model.id].endpoints[0].throughput_last_30m;
+  });
+  state.speedRanks = { byModel: Object.fromEntries(state.models.map((model, index) =>
+    [model.id, (index + 1) / state.models.length])) };
+  for (const priorities of [{ cheaper: true }, { smarter: true }, { faster: true },
+    { cheaper: true, smarter: true }, { cheaper: true, faster: true },
+    { smarter: true, faster: true }, { cheaper: true, smarter: true, faster: true }]) {
+    const result = developerPicks(state, { ...DEFAULT_SETTINGS, priorities }, now);
+    assert.equal(result.picks.length, 5);
+    assert.deepEqual(result.unavailablePreferences, []);
+  }
+  assert.equal(developerPicks(state, { ...DEFAULT_SETTINGS, priorities: { smarter: true } }, now).picks[0].id,
+    'omega/critical');
+  assert.equal(developerPicks(state, { ...DEFAULT_SETTINGS, priorities: { faster: true } }, now).picks[0].id,
+    'omega/critical');
+});
 test('combined choices show provisional matches when all benchmark evidence is absent', () => {
   const result = developerPicks(fixture(false), {
     ...DEFAULT_SETTINGS, priorities: { cheaper: true, smarter: true, faster: true },

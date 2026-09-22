@@ -2,6 +2,7 @@ import { FRESH_MS } from "./pricing.js";
 import { eligibleCatalog, parsePerformance } from "./developer-picks.js";
 import { benchmarkFor, normalizeBenchmarks } from './model-quality.js';
 import { normalizeApiKey } from './credentials.js';
+import { normalizeSpeedRanks } from './speed-ranks.js';
 const API = "https://openrouter.ai/api/v1";
 let running;
 async function getJSON(path, apiKey = null) {
@@ -52,7 +53,23 @@ export async function scan(force = false) {
         benchmarks: state.benchmarks,
         benchmarkError: state.benchmarkError,
         benchmarkRetryAt: state.benchmarkRetryAt,
+        speedRanks: state.speedRanks,
+        speedAt: state.speedAt,
       };
+      await chrome.storage.local.set({ state });
+    }
+    if ((force || !state.speedRanks || Date.now() - (state.speedAt ?? 0) >= FRESH_MS) &&
+        !(state.speedRetryAt > Date.now())) {
+      const sorts = ['latency-low-to-high', 'throughput-high-to-low'];
+      const results = await Promise.allSettled(sorts.map(sort =>
+        getJSON(`/models?output_modalities=text&sort=${sort}`)));
+      const lists = results.map(result => result.status === 'fulfilled' && Array.isArray(result.value.data)
+        ? result.value.data : null);
+      if (lists.some(Boolean)) {
+        state.speedRanks = normalizeSpeedRanks(state.models, ...lists);
+        state.speedAt = Date.now();
+      }
+      state.speedRetryAt = lists.every(Boolean) ? 0 : Date.now() + 60 * 60 * 1000;
       await chrome.storage.local.set({ state });
     }
     let apiKey = '';
@@ -60,7 +77,7 @@ export async function scan(force = false) {
       try { apiKey = normalizeApiKey(credentials.apiKey); }
       catch {
         delete state.benchmarks;
-        state.benchmarkError = 'The configured API key is not valid. Smarter preference data is unavailable.';
+        state.benchmarkError = 'The configured API key is not valid. Public catalog benchmarks remain available.';
         state.benchmarkRetryAt = Date.now() + FRESH_MS;
       }
     }
@@ -82,12 +99,13 @@ export async function scan(force = false) {
         });
       } catch (error) {
         delete state.benchmarks;
-        state.benchmarkError = 'Benchmark evidence could not be loaded. Smarter preference data is unavailable.';
+        state.benchmarkError = 'Optional benchmark refresh could not be loaded. Public catalog benchmarks remain available.';
         state.benchmarkRetryAt = error.retryAt ?? Date.now() + FRESH_MS;
       }
       await chrome.storage.local.set({ state });
     }
-    if (settings.priorities?.faster && state.schema === 3) {
+    const hasSpeedRanks = Object.keys(state.speedRanks?.byModel ?? {}).length > 0;
+    if (settings.priorities?.faster && !hasSpeedRanks && state.schema === 3) {
       const performanceQueue = state.models.filter(model => {
         const detail = state.details?.[model.id];
         return detail && Date.now() - detail.at < FRESH_MS &&
@@ -109,7 +127,7 @@ export async function scan(force = false) {
             throw new Error("Malformed endpoint response");
           let performance = [], performanceError = null;
           let performanceCheckedAt = null;
-          if (settings.priorities?.faster && data.endpoints.some(e => e.status === 0 &&
+          if (settings.priorities?.faster && !hasSpeedRanks && data.endpoints.some(e => e.status === 0 &&
               (!e.latency_last_30m?.p50 || !e.throughput_last_30m?.p50))) {
             performanceCheckedAt = Date.now();
             try {

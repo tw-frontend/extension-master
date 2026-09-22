@@ -28,7 +28,7 @@
           <label class="preference-option"><input id="prefer-smarter" type="checkbox" value="smarter" /> <span>Smarter</span></label>
           <label class="preference-option"><input id="prefer-faster" type="checkbox" value="faster" /> <span>Faster</span></label>
         </div>
-        <p id="preference-help" class="muted">Selected choices have equal weight and customize both views.</p>
+        <p id="preference-help" class="muted">These choices personalize Developer picks. Daily deals always balances quality, speed and price.</p>
         <p id="preference-status" role="status" aria-live="polite" class="muted"></p>
       </section>
       <nav class="tabs" aria-label="Recommendation views">
@@ -41,16 +41,16 @@
         <p id="picks-status" role="status" class="muted"></p>
         <div id="developer-list"></div>
         <details><summary>How these recommendations work</summary>
-          <p>Cheaper uses your estimated request cost. Smarter uses OpenRouter benchmark evidence. Faster combines measured time to first token and output throughput. When you combine choices, each has equal weight.</p>
+          <p>Cheaper uses your estimated request cost. Smarter uses OpenRouter benchmark evidence in the public model catalog. Faster uses OpenRouter's relative model ordering by latency and throughput, with provider measurements when available. Selected choices have equal weight here.</p>
           <p>Every valid model in the weekly top 200 can qualify. There is no preferred provider list or family bonus. Missing evidence stays missing instead of being guessed from a model name or description.</p>
           <p>Nitro sorts eligible providers by output throughput. It does not increase intelligence or necessarily reduce startup latency. Compare the shown provider and price before switching; use latency routing for faster first tokens.</p>
-          <p>Speed comes from public API metrics, with public provider-table fallback. Missing or ambiguous measurements stay unavailable. All speed figures are rolling medians, not guarantees.</p>
+          <p>Speed ranks compare models, while any displayed latency and throughput values describe the listed provider. Missing or ambiguous provider measurements stay unavailable. Speed is not a guarantee for your own requests.</p>
         </details>
       </section>
       <section id="deals-view" hidden>
       <p id="deal-evidence" role="status" class="muted"></p>
       <section class="hero" aria-labelledby="pick-label">
-        <span class="eyebrow" id="pick-label">YOUR BEST PICK RIGHT NOW</span>
+        <span class="eyebrow" id="pick-label">TODAY'S BEST BALANCED MODEL</span>
         <div id="best">
           <p>Your recommendation will appear as prices arrive.</p>
         </div>
@@ -91,8 +91,8 @@
         </form>
       </details>
       <details>
-        <summary>Smarter preference data (optional)</summary>
-        <p>The Smarter choice needs OpenRouter benchmark data. Add a dedicated, limited OpenRouter key to load it. The key stays in this browser profile, which is local but not encrypted, and is sent only to OpenRouter.</p>
+        <summary>Additional benchmark data (optional)</summary>
+        <p>Public catalog benchmarks already power Smarter. You can add a dedicated, limited OpenRouter key for a separate benchmark refresh. The key stays in this browser profile, which is local but not encrypted, and is sent only to OpenRouter.</p>
         <form id="api-key-settings">
           <label>OpenRouter API key<input id="api-key" type="password" minlength="8" maxlength="512" autocomplete="off" spellcheck="false" placeholder="Paste a dedicated key" /></label>
           <div class="key-actions"><button type="submit">Add or replace key</button><button id="remove-key" type="button">Remove key</button></div>

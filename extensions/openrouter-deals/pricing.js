@@ -1,5 +1,6 @@
 import { benchmarkFor, overallScore } from './model-quality.js';
-import { availablePriorities, DEFAULT_PRIORITIES, normalizePriorities, rankByPreferences } from './preferences.js';
+import { DEFAULT_PRIORITIES, rankBalanced, rankByPreferences } from './preferences.js';
+import { speedFor } from './speed-ranks.js';
 
 export const DEFAULT_SETTINGS = {
   input: 1000,
@@ -153,25 +154,25 @@ export function recommendations(
           name: model.name,
           popularityRank: model.popularityRank ?? Number.MAX_SAFE_INTEGER,
           quality: overallScore(scores),
+          speedScore: speedFor(model, state.speedRanks),
           latency: amount(candidate.latency_last_30m?.p50),
           throughput: amount(candidate.throughput_last_30m?.p50),
         });
       }
     }
   }
-  const priorities = normalizePriorities(settings.priorities);
-  const { priorities: rankingPriorities, unavailablePreferences } = availablePriorities(rows, priorities);
-  const unique = groupByModel(rows).map(group => rankByPreferences(group, rankingPriorities)[0]).filter(Boolean);
+  const cheapestProvider = group => rankByPreferences(group, { cheaper: true })[0];
+  const unique = groupByModel(rows).map(cheapestProvider).filter(Boolean);
   const discounted = rows.filter(row => row.discounted);
-  const uniqueDeals = groupByModel(discounted).map(group => rankByPreferences(group, rankingPriorities)[0]).filter(Boolean);
-  const eligible = rankByPreferences(unique, rankingPriorities);
-  const deals = rankByPreferences(uniqueDeals, rankingPriorities).slice(0, 6);
+  const uniqueDeals = groupByModel(discounted).map(cheapestProvider).filter(Boolean);
+  const { best, unavailablePreferences } = rankBalanced(unique);
+  const { ranked: deals } = rankBalanced(uniqueDeals);
   return {
-    best: eligible[0] ?? null,
-    deals,
+    best,
+    deals: deals.slice(0, 6),
     checked,
     total: (state.models ?? []).length,
-    priorities,
+    priorities: { cheaper: true, smarter: true, faster: true },
     unavailablePreferences,
   };
 }

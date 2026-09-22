@@ -32,9 +32,18 @@ export function normalizeBenchmarks(payload, now = new Date()) {
 }
 
 export function benchmarkFor(model, benchmarks) {
-  if (!benchmarks?.byModel || !model) return null;
-  return benchmarks.byModel[model.id] ??
-    (model.canonical_slug ? benchmarks.byModel[model.canonical_slug] : null) ?? null;
+  if (!model) return null;
+  const keyed = benchmarks?.byModel?.[model.id] ??
+    (model.canonical_slug ? benchmarks?.byModel?.[model.canonical_slug] : null);
+  if (keyed) return keyed;
+  const publicScores = model.benchmarks?.artificial_analysis;
+  const scores = {};
+  for (const [name, field] of [['coding', 'coding_index'],
+    ['intelligence', 'intelligence_index'], ['agentic', 'agentic_index']]) {
+    const value = finiteScore(publicScores?.[field]);
+    if (value != null) scores[name] = value;
+  }
+  return Object.keys(scores).length ? scores : null;
 }
 
 export function overallScore(scores) {

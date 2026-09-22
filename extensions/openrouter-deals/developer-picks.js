@@ -1,6 +1,7 @@
 import { DEFAULT_SETTINGS, FRESH_MS, quote } from './pricing.js';
 import { benchmarkFor, overallScore } from './model-quality.js';
 import { availablePriorities, normalizePriorities, rankByPreferences } from './preferences.js';
+import { speedFor } from './speed-ranks.js';
 
 export function eligibleCatalog(catalog) {
   return (Array.isArray(catalog) ? catalog : []).slice(0, 200)
@@ -93,7 +94,8 @@ export function developerPicks(state, settings = DEFAULT_SETTINGS, now = new Dat
     if (!best) continue;
     const scores = benchmarkFor(model, state.benchmarks);
     rows.push({ ...model, ...best, id: model.id, popularityRank: model.popularityRank,
-      scores, quality: overallScore(scores), nitro: nitroAdvice(quotes, best) });
+      scores, quality: overallScore(scores), speedScore: speedFor(model, state.speedRanks),
+      nitro: nitroAdvice(quotes, best) });
   }
   const benchmarked = rows.filter(row => row.quality != null).length;
   const { priorities: rankingPriorities, unavailablePreferences } = availablePriorities(rows, priorities);

@@ -51,6 +51,14 @@ test('benchmarks use exact id or canonical slug and never fuzzy provider matchin
   assert.equal(benchmarkFor({ id: 'alias/code-star', canonical_slug: 'new-provider/code-star' }, benchmarks).agentic, 88);
   assert.equal(benchmarkFor({ id: 'new-provider/code-star-plus' }, benchmarks), null);
 });
+test('public catalog benchmark scores work without a key and reject malformed values', () => {
+  const model = { id: 'public/model', benchmarks: { artificial_analysis: {
+    intelligence_index: 82, coding_index: 74, agentic_index: null,
+  } } };
+  assert.deepEqual(benchmarkFor(model), { intelligence: 82, coding: 74 });
+  assert.equal(overallScore(benchmarkFor(model)), 78);
+  assert.equal(benchmarkFor({ ...model, benchmarks: { artificial_analysis: { intelligence_index: 'bad' } } }), null);
+});
 
 test('overall quality averages the available benchmark evidence', () => {
   const complete = { coding: 92, intelligence: 80, agentic: 88 };

@@ -2,10 +2,9 @@
 
 ## Objective
 
-Give each OpenRouter Daily Deals user direct control over how models are ranked
-across the first 200 text models in OpenRouter's weekly-popularity catalog.
-There is one recommendation system, not separate Intelligent and Discovery
-modes.
+Give each OpenRouter Daily Deals user direct control over Developer Picks across
+the first 200 text models in OpenRouter's weekly-popularity catalog. Daily Deals
+uses a separate, fixed quality/speed/cost balance.
 
 The popup exposes three independent, combinable preferences:
 
@@ -26,9 +25,10 @@ The candidate universe is the first 200 valid, non-router text models from
 Each selected preference is normalized across the currently eligible models:
 
 - Cheaper scores lower estimated request cost higher.
-- Smarter scores higher mean benchmark evidence higher.
-- Faster combines lower median time to first token and higher median output
-  throughput, using whichever speed measurements are available.
+- Smarter scores higher mean Artificial Analysis indices from the public model
+  catalog or exact-slug authenticated benchmark records.
+- Faster scores the relative order from OpenRouter's public latency and
+  throughput model sorts. Provider medians are used when available.
 
 A model must have evidence for every selected preference. This prevents a
 missing measurement from becoming an accidental advantage and prevents the
@@ -37,22 +37,24 @@ scores are averaged, then request cost, weekly popularity, and model ID provide
 deterministic tie-breakers.
 
 If no model has evidence for a selected dimension and another selected
-dimension does have evidence, show provisional matches scored only by the
-available selected dimensions. Label both views as provisional and name the
-missing dimensions. A sole preference remains empty until its evidence is
-available. When evidence exists for a dimension, require it for models ranked
-under that preference.
+dimension does have evidence, show provisional Developer Picks scored only by
+the available selected dimensions. A sole preference remains empty until its
+evidence is available. Name missing dimensions and never invent a score.
 
 Developer Picks shows the five highest-ranked matches for the selected
-preferences. Daily Deals uses the same ranking for its highlighted model and
-orders verified discounted models by the same preferences. No provider or
-model family receives a hardcoded bonus.
+preferences. Daily Deals ignores the checkboxes and weights quality 50%,
+relative speed 30%, and request cost 20%. It highlights a model from the
+stronger quality half, outside the slowest speed quarter, and below the upper
+price quartile among usable models. Verified discounted alternatives remain
+visible. No provider or model family receives a hardcoded bonus.
 
 ## Data and interfaces
 
 - Anonymous catalog and endpoint requests continue to work without a key.
-- The optional OpenRouter key is a data-source setting for the Smarter
-  preference, not a mode switch.
+- The public catalog's `benchmarks.artificial_analysis` scores power Smarter
+  without a key; the optional OpenRouter key refreshes benchmark records.
+- Public latency and throughput sort orders power relative Faster rankings
+  even when endpoint speed medians are null.
 - With a key, the worker requests `GET /api/v1/benchmarks` and stores a
   validated, minimal score map plus source/as-of metadata.
 - Benchmark records are joined by exact OpenRouter model slug or canonical
@@ -119,7 +121,7 @@ Tests must cover:
 - single-preference and combined-preference ranking;
 - exclusion when a selected preference lacks evidence;
 - deterministic fallback when settings are absent or tampered with;
-- Developer Picks and Daily Deals sharing the user's preferences;
+- Developer Picks using the user's preferences while Daily Deals stays fixed;
 - no provider-family preference in either view;
 - benchmark authentication without key leakage and graceful failure;
 - saving, replacing, and removing credentials without echoing the saved key.
@@ -141,10 +143,11 @@ Tests must cover:
   are removed.
 - Cheaper, Smarter, and Faster are accessible multi-select buttons and persist
   per browser profile.
-- Any non-empty combination changes both Developer Picks and Daily Deals using
-  the documented equal-weight ranking.
-- Selecting Smarter without benchmark evidence produces an honest missing-data
-  state rather than an intelligence guess.
+- Any non-empty combination changes Developer Picks using equal-weight ranking;
+  Daily Deals remains fixed when these controls change.
+- Public catalog scores support Smarter without a key; missing benchmark evidence
+  produces an honest missing-data state rather than an intelligence guess.
+- Public relative speed ranks support Faster when provider medians are absent.
 - Any valid model in the top 200 can win from its evidence.
 - Automated tests, syntax checks, extension validation, and browser smoke
   verification pass.

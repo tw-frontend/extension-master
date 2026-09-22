@@ -50,7 +50,8 @@ function render() {
     day: "numeric",
   });
   const result = recommendations({ ...state, models: state.schema === 3 ? state.models : [] }, settings);
-  $('priority-summary').textContent = priorityText(result.priorities).toUpperCase();
+  $('priority-summary').textContent = $('deals-view').hidden
+    ? `PICKS: ${priorityText(settings.priorities).toUpperCase()}` : 'DAILY: BALANCED';
   const stale = !state.catalogAt || Date.now() - state.catalogAt >= FRESH_MS;
   const progress = `${result.checked}/${result.total} models checked for provider offers`;
   const time = state.catalogAt
@@ -63,10 +64,8 @@ function render() {
   );
   $("count").textContent = `${result.deals.length} found`;
   $('deal-evidence').textContent = result.unavailablePreferences.length
-    ? result.best
-      ? `Provisional: ${missingEvidenceText(result.unavailablePreferences)} evidence is unavailable. Ranked by ${priorityText(result.best.matchedPreferences)}.${result.unavailablePreferences.includes('smarter') ? ' Add an OpenRouter key to include Smarter.' : ''}`
-      : `No ${missingEvidenceText(result.unavailablePreferences)} evidence is available for the selected ranking.`
-    : '';
+    ? `Provisional balance: ${missingEvidenceText(result.unavailablePreferences)} evidence is unavailable. Quality, speed and cost are used when available.`
+    : 'A fixed balance of benchmark quality (50%), relative speed (30%) and request cost (20%). Strong, reasonably fast models are compared at affordable prices.';
   $("best").replaceChildren();
   const row = result.best;
   if (!row)
@@ -113,7 +112,7 @@ function render() {
     $("best").append(
       element(
         "p",
-        `${result.unavailablePreferences.length ? 'Provisional fit' : 'Preference fit'} ${Math.round(row.preferenceScore * 100)}%: ${scoreText(row)}. ${row.verified ? `Provider checked ${new Date(row.checkedAt).toLocaleString()}. Use the listed provider to seek this price; automatic routing may cost more.` : "Catalog estimate only; provider discount coverage is pending."}`,
+        `${result.unavailablePreferences.length ? 'Provisional balance' : 'Balance'} ${Math.round(row.preferenceScore * 100)}%: ${scoreText(row)}. ${row.verified ? `Provider checked ${new Date(row.checkedAt).toLocaleString()}. Use the listed provider to seek this price; automatic routing may cost more.` : "Catalog estimate only; provider discount coverage is pending."}`,
         "reason",
       ),
       link(row, "View model & providers ↗"),
@@ -152,7 +151,7 @@ function pickCard(row, index, provisional = false) {
   if (row.quality != null) card.append(element('p', `Average available benchmark evidence: ${row.quality.toFixed(1)} / 100.`, 'provider'));
   card.append(element('p', `${money(row.input * 1e6)} input / ${money(row.output * 1e6)} output per 1M tokens`, 'pick-price'),
     element('p', `${money(row.cost)} / your request · ${row.provider}${row.discounted ? ` · ${percent(row.percent)} off` : ''}`, 'provider'));
-  card.append(element('p', `Latency: ${row.latency == null ? 'unavailable' : row.latency.toFixed(2) + 's to first token'} · Speed: ${row.throughput == null ? 'unavailable' : Math.round(row.throughput) + ' tok/s'}`, 'pick-speed'),
+  card.append(element('p', `${row.speedScore == null ? 'Model speed rank: unavailable' : `OpenRouter relative speed rank: ${Math.round(row.speedScore * 100)}/100`} · Provider latency: ${row.latency == null ? 'unavailable' : row.latency.toFixed(2) + 's'} · Provider speed: ${row.throughput == null ? 'unavailable' : Math.round(row.throughput) + ' tok/s'}`, 'pick-speed'),
     element('p', `Nitro: ${row.nitro.text}`, 'pick-nitro'));
   if (row.nitro.fast) card.append(element('p', `Fast provider price: ${money(row.nitro.fast.input * 1e6)} input / ${money(row.nitro.fast.output * 1e6)} output per 1M.`, 'provider'));
   const actions = element('div', null, 'pick-actions');
@@ -170,8 +169,8 @@ function renderDeveloperPicks() {
   const smartSelected = picks.priorities.smarter;
   const evidence = picks.unavailablePreferences.length
     ? picks.picks.length
-      ? `No ${missingEvidenceText(picks.unavailablePreferences)} evidence is available. These are provisional matches ranked by ${priorityText(picks.picks[0].matchedPreferences)}.${picks.unavailablePreferences.includes('smarter') ? ' Add an OpenRouter key to include Smarter.' : ''}`
-      : `No ${missingEvidenceText(picks.unavailablePreferences)} evidence is available for the selected ranking.${smartSelected ? ' Add an OpenRouter key for Smarter.' : ''}`
+      ? `No ${missingEvidenceText(picks.unavailablePreferences)} evidence is available. These are provisional matches ranked by ${priorityText(picks.picks[0].matchedPreferences)}.`
+      : `No ${missingEvidenceText(picks.unavailablePreferences)} evidence is available for the selected ranking. Refresh to retry the catalog and speed rankings.`
     : `Ranking by ${priorityText(picks.priorities)}${smartSelected && picks.benchmarkAsOf ? ` with benchmark data dated ${new Date(picks.benchmarkAsOf).toLocaleDateString()}` : ''}.`;
   $('picks-status').textContent = state.schema !== 3 ? 'Updating the catalog for adaptive top-200 selection…' :
     `${evidence} ${state.queue?.length ? 'Scanning providers; matches may change.' : ''}${state.benchmarkError ? ` ${state.benchmarkError}` : ''}${picks.picks.length < 5 ? ' Some matches are waiting for complete selected evidence.' : ''}`;
@@ -181,7 +180,7 @@ function renderCredentialStatus(message = '') {
   $('remove-key').disabled = !credentialStatus.configured;
   $('key-status').textContent = message || (credentialStatus.configured
     ? state.benchmarkError || 'A key is configured. The saved value is never shown. Benchmark evidence refreshes automatically.'
-    : 'No key configured. Cheaper and Faster remain available; Smarter needs benchmark data.');
+    : 'No key configured. Public catalog benchmarks still power Smarter.');
 }
 function clearBenchmarkState() {
   const next = { ...state };
@@ -195,6 +194,7 @@ for (const view of ['picks', 'deals']) {
     $('developer-view').hidden = view !== 'picks'; $('deals-view').hidden = view !== 'deals';
     $('show-picks').setAttribute('aria-pressed', String(view === 'picks'));
     $('show-deals').setAttribute('aria-pressed', String(view === 'deals'));
+    render();
   });
 }
 $("settings").addEventListener("submit", async (event) => {
@@ -235,7 +235,7 @@ $("remove-key").addEventListener("click", async () => {
   await chrome.storage.local.remove(['credentials', 'credentialStatus']);
   await chrome.storage.local.set({ state });
   $("api-key").value = '';
-  renderCredentialStatus('Key removed. Smarter will wait for benchmark data.');
+  renderCredentialStatus('Key removed. Public catalog benchmarks remain available.');
   render();
   await chrome.runtime.sendMessage({ type: 'credentialsChanged', force: true });
 });

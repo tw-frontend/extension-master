@@ -51,7 +51,7 @@ test('without promotions the cheaper preference still selects the lowest request
   state.details['other/cheap'].endpoints[0].pricing.prompt = '0';
   assert.equal(recommendations(state, DEFAULT_SETTINGS, now).best.id, 'other/cheap');
 });
-test('smarter preference ranks benchmark evidence directly', () => {
+test('Daily Deals balances benchmark evidence against cost even when Smarter is selected', () => {
   const state = stateFor([['strong/model', .002, .2], ['medium/model', .001, .1], ['weak/model', .0001, .9]]);
   state.benchmarks = { byModel: {
     'strong/model': { coding: 90, intelligence: 90, agentic: 90 },
@@ -59,8 +59,9 @@ test('smarter preference ranks benchmark evidence directly', () => {
     'weak/model': { coding: 20, intelligence: 20, agentic: 20 },
   } };
   const result = recommendations(state, { ...DEFAULT_SETTINGS, priorities: { smarter: true } }, now);
-  assert.equal(result.best.id, 'strong/model');
-  assert.deepEqual(result.deals.map(row => row.id), ['strong/model', 'medium/model', 'weak/model']);
+  assert.equal(result.best.id, 'medium/model');
+  assert.deepEqual(new Set(result.deals.map(row => row.id)),
+    new Set(['strong/model', 'medium/model', 'weak/model']));
   assert.equal(result.qualityFloor, undefined);
 });
 test('combined daily choices retain provisional price and speed results without benchmarks', () => {
@@ -99,4 +100,21 @@ test('one model appears once even with multiple discounted providers', () => {
   state.details['z-ai/glm'].endpoints.push({ status: 0, pricing: { prompt: '.001', completion: '.001', discount: .2 } });
   const result = recommendations(state, DEFAULT_SETTINGS, now);
   assert.equal(result.deals.length, 1); assert.equal(result.best.cost, 2);
+});
+test('Daily Deals ignores Developer Picks checkboxes and favors balanced value over extremes', () => {
+  const state = stateFor([
+    ['cheap/weak', .0001, 0, 0, 2, 30],
+    ['balanced/model', .002, 0, 0, .7, 140],
+    ['premium/model', .05, 0, 0, .2, 300],
+  ]);
+  for (const [id, quality] of [['cheap/weak', 20], ['balanced/model', 80], ['premium/model', 95]]) {
+    state.models.find(model => model.id === id).benchmarks = {
+      artificial_analysis: { intelligence_index: quality },
+    };
+  }
+  const results = [{ cheaper: true }, { smarter: true }, { faster: true },
+    { cheaper: true, smarter: true, faster: true }].map(priorities =>
+    recommendations(state, { ...DEFAULT_SETTINGS, priorities }, now));
+  assert.ok(results.every(result => result.best.id === 'balanced/model'));
+  assert.ok(results.every(result => result.best.preferenceScore === results[0].best.preferenceScore));
 });

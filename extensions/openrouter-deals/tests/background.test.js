@@ -17,11 +17,14 @@ test('scan checkpoints batches and resumes, including models outside preferences
   };
   await scan();
   assert.equal(db.state.queue.length, 3);
-  assert.match(calls[1], /other\/model-0\/endpoints$/);
+  assert.ok(calls.some(url => /other\/model-0\/endpoints$/.test(url)));
+  assert.ok(db.state.speedRanks.byModel['other/model-0'] != null);
   await scan();
   assert.equal(db.state.queue.length, 0);
   assert.equal(Object.keys(db.state.details).length, 21);
-  assert.equal(calls.filter(url => url.includes('/models?')).length, 1);
+  assert.equal(calls.filter(url => url.includes('sort=top-weekly')).length, 1);
+  assert.equal(calls.filter(url => url.includes('sort=latency-low-to-high')).length, 1);
+  assert.equal(calls.filter(url => url.includes('sort=throughput-high-to-low')).length, 1);
 });
 test('429 backs off without losing pending work; failed catalog preserves cache', async () => {
   db = { state: { models: [model('a/b')], catalogAt: Date.now(), details: {}, queue: ['a/b'] } };
