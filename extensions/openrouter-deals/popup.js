@@ -42,6 +42,10 @@ function scoreText(row) {
   return Object.entries(row.preferenceBreakdown ?? {})
     .map(([key, score]) => `${PRIORITY_LABELS[key]} ${Math.round(score * 100)}%`).join(' · ');
 }
+function artificialAnalysisText(row) {
+  if (!row.analysis) return null;
+  return `Artificial Analysis: intelligence ${row.analysis.intelligence.toFixed(1)} · ${Math.round(row.analysis.speed)} output tok/s · ${money(row.analysis.costPerTask)} / task.`;
+}
 function render() {
   renderDeveloperPicks();
   $("date").textContent = new Date().toLocaleDateString(undefined, {
@@ -49,7 +53,7 @@ function render() {
     month: "long",
     day: "numeric",
   });
-  const result = recommendations({ ...state, models: state.schema === 4 ? state.models : [] }, settings);
+  const result = recommendations({ ...state, models: state.schema === 5 ? state.models : [] }, settings);
   renderFreeModels(result.freeModels);
   $('priority-summary').textContent = !$('free-view').hidden ? 'FREE: RANKED'
     : $('deals-view').hidden ? `PICKS: ${priorityText(settings.priorities).toUpperCase()}` : 'DAILY: BALANCED';
@@ -64,9 +68,11 @@ function render() {
     state.queue?.length && !state.error && !stale,
   );
   $("count").textContent = `${result.deals.length} found`;
-  $('deal-evidence').textContent = result.unavailablePreferences.length
+  $('deal-evidence').textContent = result.evidenceSource === 'artificial-analysis'
+    ? `Balanced equally across Artificial Analysis intelligence, output speed and cost per task${state.artificialAnalysis?.asOf ? ` · updated ${new Date(state.artificialAnalysis.asOf).toLocaleDateString()}` : ''}.`
+    : result.unavailablePreferences.length
     ? `Provisional balance: ${missingEvidenceText(result.unavailablePreferences)} evidence is unavailable. Quality, speed and cost are used when available.`
-    : 'A fixed balance of benchmark quality (50%), relative speed (30%) and request cost (20%). Strong, reasonably fast models are compared at affordable prices.';
+    : `Artificial Analysis metrics are unavailable, so this view is using OpenRouter benchmark quality, relative speed and request cost. ${state.artificialAnalysisError ?? ''}`;
   $("best").replaceChildren();
   const row = result.best;
   if (!row)
@@ -110,6 +116,8 @@ function render() {
         "estimate",
       ),
     );
+    const analysis = artificialAnalysisText(row);
+    if (analysis) $("best").append(element('p', analysis, 'estimate'));
     $("best").append(
       element(
         "p",
@@ -149,10 +157,12 @@ function pickCard(row, index, provisional = false) {
   card.append(element('span', `${provisional ? 'PROVISIONAL' : 'MATCH'} ${index + 1} · ${Math.round(row.preferenceScore * 100)}% FIT`, 'eyebrow'),
     element('h3', row.name), element('p', `#${row.popularityRank} weekly${row.created ? " · " + new Date(row.created * 1000).toLocaleDateString() : ""}`, 'provider'),
     element('p', scoreText(row), 'pick-reason'));
-  if (row.quality != null) card.append(element('p', `Average available benchmark evidence: ${row.quality.toFixed(1)} / 100.`, 'provider'));
+  const analysis = artificialAnalysisText(row);
+  if (analysis) card.append(element('p', analysis, 'provider'));
+  else if (row.quality != null) card.append(element('p', `Average available OpenRouter benchmark evidence: ${row.quality.toFixed(1)} / 100.`, 'provider'));
   card.append(element('p', `${money(row.input * 1e6)} input / ${money(row.output * 1e6)} output per 1M tokens`, 'pick-price'),
     element('p', `${money(row.cost)} / your request · ${row.provider}${row.discounted ? ` · ${percent(row.percent)} off` : ''}`, 'provider'));
-  card.append(element('p', `${row.speedScore == null ? 'Model speed rank: unavailable' : `OpenRouter relative speed rank: ${Math.round(row.speedScore * 100)}/100`} · Provider latency: ${row.latency == null ? 'unavailable' : row.latency.toFixed(2) + 's'} · Provider speed: ${row.throughput == null ? 'unavailable' : Math.round(row.throughput) + ' tok/s'}`, 'pick-speed'),
+  card.append(element('p', `${row.analysis ? `Artificial Analysis model speed: ${Math.round(row.analysis.speed)} tok/s` : row.speedScore == null ? 'Model speed rank: unavailable' : `OpenRouter relative speed rank: ${Math.round(row.speedScore * 100)}/100`} · Provider latency: ${row.latency == null ? 'unavailable' : row.latency.toFixed(2) + 's'} · Provider speed: ${row.throughput == null ? 'unavailable' : Math.round(row.throughput) + ' tok/s'}`, 'pick-speed'),
     element('p', `Nitro: ${row.nitro.text}`, 'pick-nitro'));
   if (row.nitro.fast) card.append(element('p', `Fast provider price: ${money(row.nitro.fast.input * 1e6)} input / ${money(row.nitro.fast.output * 1e6)} output per 1M.`, 'provider'));
   const actions = element('div', null, 'pick-actions');
@@ -175,7 +185,9 @@ function renderFreeModels(rows) {
     card.append(element('span', `FREE ${index + 1} · ${score}`, 'eyebrow'),
       element('h3', row.name),
       element('p', `#${row.popularityRank} weekly · ${row.provider}`, 'provider'),
-      element('p', `Benchmark quality: ${row.quality == null ? 'unavailable' : row.quality.toFixed(1) + '/100'} · Relative speed: ${row.speedScore == null ? 'unavailable' : Math.round(row.speedScore * 100) + '/100'}`, 'pick-reason'),
+      element('p', row.analysis
+        ? `Artificial Analysis intelligence: ${row.analysis.intelligence.toFixed(1)} · speed: ${Math.round(row.analysis.speed)} tok/s`
+        : `Benchmark quality: ${row.quality == null ? 'unavailable' : row.quality.toFixed(1) + '/100'} · Relative speed: ${row.speedScore == null ? 'unavailable' : Math.round(row.speedScore * 100) + '/100'}`, 'pick-reason'),
       element('p', '$0 input / $0 output for the selected provider · provider limits may apply', 'pick-price'),
       link(row, 'Model & providers ↗'));
     return card;
@@ -185,13 +197,15 @@ function renderDeveloperPicks() {
   const picks = developerPicks(state, settings);
   $('pick-count').textContent = `${picks.picks.length}/5 ${picks.unavailablePreferences.length && picks.picks.length ? 'provisional' : 'ready'}`;
   const smartSelected = picks.priorities.smarter;
-  const evidence = picks.unavailablePreferences.length
+  const evidence = picks.evidenceSource === 'artificial-analysis'
+    ? `Ranking by ${priorityText(picks.priorities)} using Artificial Analysis intelligence, output speed and cost per task${picks.benchmarkAsOf ? ` · updated ${new Date(picks.benchmarkAsOf).toLocaleDateString()}` : ''}.`
+    : picks.unavailablePreferences.length
     ? picks.picks.length
       ? `No ${missingEvidenceText(picks.unavailablePreferences)} evidence is available. These are provisional matches ranked by ${priorityText(picks.picks[0].matchedPreferences)}.`
       : `No ${missingEvidenceText(picks.unavailablePreferences)} evidence is available for the selected ranking. Refresh to retry the catalog and speed rankings.`
     : `Ranking by ${priorityText(picks.priorities)}${smartSelected && picks.benchmarkAsOf ? ` with benchmark data dated ${new Date(picks.benchmarkAsOf).toLocaleDateString()}` : ''}.`;
-  $('picks-status').textContent = state.schema !== 4 ? 'Updating the catalog for selected makers and recent versions…' :
-    `${evidence} ${state.queue?.length ? 'Scanning providers; matches may change.' : ''}${state.benchmarkError ? ` ${state.benchmarkError}` : ''}${picks.picks.length < 5 ? ' Some matches are waiting for complete selected evidence.' : ''}`;
+  $('picks-status').textContent = state.schema !== 5 ? 'Updating the catalog for selected makers and recent versions…' :
+    `${evidence} ${state.queue?.length ? 'Scanning providers; matches may change.' : ''}${picks.evidenceSource !== 'artificial-analysis' && state.artificialAnalysisError ? ` ${state.artificialAnalysisError}` : ''}${state.benchmarkError ? ` ${state.benchmarkError}` : ''}${picks.picks.length < 5 ? ' Some matches are waiting for complete selected evidence.' : ''}`;
   $('developer-list').replaceChildren(...picks.picks.map((row, index) => pickCard(row, index, picks.unavailablePreferences.length > 0)));
 }
 function renderCredentialStatus(message = '') {

@@ -3,7 +3,10 @@ import { eligibleCatalog, parsePerformance } from "./developer-picks.js";
 import { benchmarkFor, normalizeBenchmarks } from './model-quality.js';
 import { normalizeApiKey } from './credentials.js';
 import { normalizeSpeedRanks } from './speed-ranks.js';
+import { artificialAnalysisFresh, normalizeArtificialAnalysis } from './artificial-analysis.js';
 const API = "https://openrouter.ai/api/v1";
+const ARTIFICIAL_ANALYSIS_SNAPSHOT =
+  "https://raw.githubusercontent.com/tw-frontend/extension-master/main/data/artificial-analysis.json";
 let running;
 async function getJSON(path, apiKey = null) {
   const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined;
@@ -32,18 +35,27 @@ async function getJSON(path, apiKey = null) {
   if (!body || body.data == null) throw new Error("Unexpected OpenRouter response");
   return body;
 }
+async function getRemoteJSON(url) {
+  const response = await fetch(url, {
+    credentials: "omit",
+    cache: "no-store",
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error(`Benchmark snapshot returned HTTP ${response.status}`);
+  return response.json();
+}
 export async function scan(force = false) {
   let { state = {}, credentials = {}, settings = {} } = await chrome.storage.local.get(["state", "credentials", "settings"]);
   if (!force && state.retryAt > Date.now()) return;
   try {
-    if (force || state.schema !== 4 || !state.catalogAt || Date.now() - state.catalogAt >= FRESH_MS) {
+    if (force || state.schema !== 5 || !state.catalogAt || Date.now() - state.catalogAt >= FRESH_MS) {
       const { data } = await getJSON("/models?output_modalities=text&sort=top-weekly");
       if (!Array.isArray(data) || !data.length)
         throw new Error("Empty or malformed model catalog");
       const models = eligibleCatalog(data);
       state = {
         models,
-        schema: 4,
+        schema: 5,
         catalogSize: data.length,
         catalogAt: Date.now(),
         details: {},
@@ -56,7 +68,30 @@ export async function scan(force = false) {
         benchmarkRetryAt: state.benchmarkRetryAt,
         speedRanks: state.speedRanks,
         speedAt: state.speedAt,
+        artificialAnalysis: state.artificialAnalysis,
+        artificialAnalysisAt: state.artificialAnalysisAt,
+        artificialAnalysisError: state.artificialAnalysisError,
       };
+      await chrome.storage.local.set({ state });
+    }
+    if (force || !state.artificialAnalysisAt || Date.now() - state.artificialAnalysisAt >= FRESH_MS) {
+      try {
+        const snapshot = normalizeArtificialAnalysis(
+          await getRemoteJSON(ARTIFICIAL_ANALYSIS_SNAPSHOT),
+        );
+        if (Object.keys(snapshot.byModel).length && !artificialAnalysisFresh(snapshot)) {
+          throw new Error('Artificial Analysis snapshot is stale');
+        }
+        state.artificialAnalysis = snapshot;
+        state.artificialAnalysisAt = Date.now();
+        state.artificialAnalysisError = Object.keys(state.artificialAnalysis.byModel).length
+          ? null
+          : 'Licensed Artificial Analysis metrics are not active yet; using OpenRouter evidence.';
+      } catch {
+        if (!artificialAnalysisFresh(state.artificialAnalysis)) delete state.artificialAnalysis;
+        state.artificialAnalysisError = 'Artificial Analysis metrics could not be refreshed; using available OpenRouter evidence.';
+        state.artificialAnalysisAt = Date.now();
+      }
       await chrome.storage.local.set({ state });
     }
     if ((force || !state.speedRanks || Date.now() - (state.speedAt ?? 0) >= FRESH_MS) &&
@@ -107,7 +142,7 @@ export async function scan(force = false) {
       await chrome.storage.local.set({ state });
     }
     const hasSpeedRanks = Object.keys(state.speedRanks?.byModel ?? {}).length > 0;
-    if (settings.priorities?.faster && !hasSpeedRanks && state.schema === 4) {
+    if (settings.priorities?.faster && !hasSpeedRanks && state.schema === 5) {
       const performanceQueue = state.models.filter(model => {
         const detail = state.details?.[model.id];
         return detail && Date.now() - detail.at < FRESH_MS &&

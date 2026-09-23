@@ -4,10 +4,14 @@ A dependency-free Chromium extension that evaluates OpenRouter's weekly top
 200 text models from OpenAI, Anthropic, Z.ai, Xiaomi, Qwen, Google and DeepSeek. Each user customizes **Developer picks** with three combinable
 preferences:
 
-- **Cheaper** — lower estimated request cost ranks higher.
-- **Smarter** — stronger OpenRouter benchmark evidence ranks higher.
-- **Faster** — lower time to first token and higher output throughput rank
+- **Cheaper** — lower Artificial Analysis cost per Intelligence Index task
+  ranks higher.
+- **Smarter** — higher Artificial Analysis Intelligence Index ranks higher.
+- **Faster** — higher Artificial Analysis median output tokens per second ranks
   higher.
+
+When the licensed Artificial Analysis snapshot is unavailable, these choices
+fall back to OpenRouter request cost, benchmark evidence and relative speed.
 
 **Daily deals** always recommends a balanced model independently of these
 checkboxes. Each recognizable model family is limited to its two newest
@@ -46,20 +50,43 @@ eligible models:
 
 | Preference | Evidence | Better score |
 | --- | --- | --- |
-| Cheaper | Estimated input, output, and request fees | Lower cost |
-| Smarter | Mean available coding, intelligence, and agentic indices in the public catalog | Higher benchmark |
-| Faster | Public model ordering by latency and throughput; provider measurements when available | Higher relative speed rank |
+| Cheaper | Artificial Analysis cost per Intelligence Index task | Lower cost per task |
+| Smarter | Artificial Analysis Intelligence Index | Higher intelligence |
+| Faster | Artificial Analysis median output tokens per second | Higher output speed |
 
 A model must have evidence for every selected preference. This is deliberate:
 missing data cannot become an advantage, and the extension never silently
 ignores one of the user's choices. Dimension scores are averaged with equal
 weight. Request cost, weekly popularity, and model ID break exact ties.
 
-Developer Picks shows the five highest-ranked matches. Daily Deals uses a fixed
-50% quality, 30% speed, 20% cost balance. The highlighted model comes from the
-stronger quality half, outside the slowest speed quarter, and below the upper
-price quartile among usable models. Verified discounted models are listed
-separately.
+Developer Picks shows the five highest-ranked matches. Daily Deals ignores the
+checkboxes and gives intelligence, output speed, and cost per task equal weight.
+Only models with all three Artificial Analysis measurements take part while a
+licensed snapshot is active. Verified discounted OpenRouter providers are
+listed separately.
+
+## Artificial Analysis data boundary
+
+The extension does not crawl Artificial Analysis pages. Their site terms
+prohibit automated scraping, and their API documentation says API keys must not
+be exposed in browsers. A scheduled GitHub Actions workflow therefore calls the
+documented API with a repository secret and publishes only the fields needed by
+the extension. The popup visibly attributes Artificial Analysis.
+
+Public redistribution requires permission from Artificial Analysis. The sync
+script deliberately accepts only a `commercial` API response and only records
+models carrying an exact `openrouter_api_id`; it never guesses model identity
+from display names.
+
+To activate the snapshot:
+
+1. Obtain Artificial Analysis Commercial API access and redistribution rights.
+2. Add the key as the repository secret `ARTIFICIAL_ANALYSIS_API_KEY`.
+3. Run the **Artificial Analysis Snapshot** workflow once. It then refreshes
+   and republishes `data/artificial-analysis.json` daily so stale metrics expire.
+
+Until those steps are complete, the committed empty snapshot keeps the
+extension on its existing OpenRouter fallback rather than inventing metrics.
 
 ## Smarter preference and API-key boundary
 
@@ -120,7 +147,9 @@ long-context surcharges, and non-text charges can change actual cost.
 Recommendations are evidence-based comparisons, not guarantees of task
 success.
 
-Sources: [Models API](https://openrouter.ai/docs/api/api-reference/models/get-models),
+Sources: [Artificial Analysis Data API](https://artificialanalysis.ai/data-api/docs),
+[Artificial Analysis methodology](https://artificialanalysis.ai/methodology/intelligence-benchmarking),
+[Models API](https://openrouter.ai/docs/api/api-reference/models/get-models),
 [Benchmarks API](https://openrouter.ai/docs/api/api-reference/benchmarks/get-benchmarks),
 [Endpoints API](https://openrouter.ai/docs/api/api-reference/endpoints/list-endpoints),
 [provider routing](https://openrouter.ai/docs/guides/routing/provider-selection).
@@ -132,7 +161,9 @@ Sources: [Models API](https://openrouter.ai/docs/api/api-reference/models/get-mo
 - `pricing.js`: price overrides and fixed-balance Daily Deals.
 - `speed-ranks.js`: public latency and throughput order normalization.
 - `model-quality.js`: benchmark validation and exact matching.
+- `artificial-analysis.js`: licensed snapshot validation and exact OpenRouter ID matching.
 - `background.js`: catalog, benchmark, and provider refresh with backoff.
+- `scripts/sync-artificial-analysis.mjs`: server-side commercial API sync and minimized snapshot generation.
 - `credentials.js`: API-key boundary validation.
 - `popup.*`: accessible preference controls, cards, and settings UI.
 - `tests/`: ranking, pricing, benchmark, credential, and recovery coverage.

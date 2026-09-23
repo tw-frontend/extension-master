@@ -42,7 +42,7 @@
         <p id="picks-status" role="status" class="muted"></p>
         <div id="developer-list"></div>
         <details><summary>How these recommendations work</summary>
-          <p>Cheaper uses your estimated request cost. Smarter uses OpenRouter benchmark evidence in the public model catalog. Faster uses OpenRouter's relative model ordering by latency and throughput, with provider measurements when available. Selected choices have equal weight here.</p>
+          <p>When the licensed snapshot is active, Cheaper uses Artificial Analysis cost per task, Smarter uses its Intelligence Index, and Faster uses its output tokens per second. Selected choices have equal weight. The extension falls back to OpenRouter request cost, catalog benchmark evidence and relative speed only when that snapshot is unavailable.</p>
           <p>Only OpenAI, Anthropic, Z.ai, Xiaomi, Qwen, Google and DeepSeek models in the weekly top 200 qualify. For each recognizable model family, only its two newest versions are compared. Missing evidence stays missing instead of being guessed from a model name or description.</p>
           <p>Nitro sorts eligible providers by output throughput. It does not increase intelligence or necessarily reduce startup latency. Compare the shown provider and price before switching; use latency routing for faster first tokens.</p>
           <p>Speed ranks compare models, while any displayed latency and throughput values describe the listed provider. Missing or ambiguous provider measurements stay unavailable. Speed is not a guarantee for your own requests.</p>
@@ -65,7 +65,7 @@
       </section>
       <section id="free-view" hidden>
         <div class="section-title"><h2>Top free models</h2><span id="free-count"></span></div>
-        <p class="muted">Available free models from the selected makers, ranked by benchmark quality (65%) and relative speed (35%). Weekly popularity breaks ties. Free provider capacity and limits can change.</p>
+        <p class="muted">Available free models from the selected makers, ranked equally by Artificial Analysis intelligence and output speed when licensed data is available. Weekly popularity breaks ties. Free provider capacity and limits can change.</p>
         <div id="free-list"></div>
         <p id="free-empty" class="muted"></p>
       </section>
@@ -108,7 +108,7 @@
       </details>
     </main>
     <footer>
-      USD prices for uncached text. Provider availability, account routing,
+      Ranking data attributed to <a href="https://artificialanalysis.ai/" target="_blank" rel="noopener noreferrer">Artificial Analysis</a> when available. USD prices for uncached text. Provider availability, account routing,
       benchmark coverage, reasoning and other usage charges can affect your bill. Free models may
       have tighter limits. Offers can end between checks.
     </footer>

@@ -3,6 +3,7 @@ import { benchmarkFor, overallScore } from './model-quality.js';
 import { availablePriorities, normalizePriorities, rankByPreferences } from './preferences.js';
 import { speedFor } from './speed-ranks.js';
 import { eligibleCatalog } from './model-eligibility.js';
+import { analysisFor } from './artificial-analysis.js';
 
 export { eligibleCatalog } from './model-eligibility.js';
 const positive = n => typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null;
@@ -62,7 +63,7 @@ export function nitroAdvice(quotes, base) {
   return { text: `${verdict}: ${Math.round(fast.throughput)} tok/s via ${fast.provider}; ${Number.isFinite(multiplier) ? multiplier.toFixed(1) + '×' : 'higher'} request cost.`, fast };
 }
 export function developerPicks(state, settings = DEFAULT_SETTINGS, now = new Date()) {
-  const models = state.schema === 4 ? eligibleCatalog(state.models ?? []) : [];
+  const models = state.schema === 5 ? eligibleCatalog(state.models ?? []) : [];
   const priorities = normalizePriorities(settings.priorities);
   const rows = [];
   for (const model of models) {
@@ -89,20 +90,31 @@ export function developerPicks(state, settings = DEFAULT_SETTINGS, now = new Dat
     })), providerPriorities)[0];
     if (!best) continue;
     const scores = benchmarkFor(model, state.benchmarks);
+    const analysis = analysisFor(model, state.artificialAnalysis);
     rows.push({ ...model, ...best, id: model.id, popularityRank: model.popularityRank,
-      scores, quality: overallScore(scores), speedScore: speedFor(model, state.speedRanks),
+      scores, analysis, quality: analysis?.intelligence ?? overallScore(scores),
+      speedScore: speedFor(model, state.speedRanks),
       nitro: nitroAdvice(quotes, best) });
   }
-  const benchmarked = rows.filter(row => row.quality != null).length;
-  const { priorities: rankingPriorities, unavailablePreferences } = availablePriorities(rows, priorities);
-  const picks = rankByPreferences(rows, rankingPriorities).slice(0, 5);
+  const selected = Object.entries(priorities).filter(([, value]) => value).map(([key]) => key);
+  const analysisRows = rows.filter(row => selected.every(key => key === 'cheaper'
+    ? Number.isFinite(row.analysis?.costPerTask) : key === 'smarter'
+      ? Number.isFinite(row.analysis?.intelligence) : Number.isFinite(row.analysis?.speed) && row.analysis.speed > 0));
+  const evidenceRows = analysisRows.length ? analysisRows : rows;
+  const evidenceSource = analysisRows.length ? 'artificial-analysis' : 'openrouter-fallback';
+  const benchmarked = evidenceRows.filter(row => row.quality != null).length;
+  const { priorities: rankingPriorities, unavailablePreferences } = availablePriorities(evidenceRows, priorities);
+  const picks = rankByPreferences(evidenceRows, rankingPriorities).slice(0, 5);
   return {
     picks,
     shortlist: picks,
     assessed: models.length,
     benchmarked,
     priorities,
+    evidenceSource,
     unavailablePreferences,
-    benchmarkAsOf: benchmarked ? state.benchmarks?.asOf ?? null : null,
+    benchmarkAsOf: evidenceSource === 'artificial-analysis'
+      ? state.artificialAnalysis?.asOf ?? null
+      : benchmarked ? state.benchmarks?.asOf ?? null : null,
   };
 }

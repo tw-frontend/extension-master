@@ -2,6 +2,7 @@ import { benchmarkFor, overallScore } from './model-quality.js';
 import { DEFAULT_PRIORITIES, rankBalanced, rankByPreferences } from './preferences.js';
 import { speedFor } from './speed-ranks.js';
 import { eligibleCatalog } from './model-eligibility.js';
+import { analysisFor } from './artificial-analysis.js';
 
 export const DEFAULT_SETTINGS = {
   input: 1000,
@@ -151,12 +152,14 @@ export function recommendations(
     for (const candidate of candidates) {
       if (settings.includeFree || candidate.cost > 0 || candidate.cost === 0 && candidate.verified) {
         const scores = benchmarkFor(model, state.benchmarks);
+        const analysis = analysisFor(model, state.artificialAnalysis);
         const row = {
           ...candidate,
           id: model.id,
           name: model.name,
           popularityRank: model.popularityRank ?? Number.MAX_SAFE_INTEGER,
-          quality: overallScore(scores),
+          analysis,
+          quality: analysis?.intelligence ?? overallScore(scores),
           speedScore: speedFor(model, state.speedRanks),
           latency: amount(candidate.latency_last_30m?.p50),
           throughput: amount(candidate.throughput_last_30m?.p50),
@@ -170,11 +173,23 @@ export function recommendations(
   const unique = groupByModel(rows).map(cheapestProvider).filter(Boolean);
   const discounted = rows.filter(row => row.discounted);
   const uniqueDeals = groupByModel(discounted).map(cheapestProvider).filter(Boolean);
-  const { best, unavailablePreferences } = rankBalanced(unique);
-  const { ranked: deals } = rankBalanced(uniqueDeals);
-  const freeModels = groupByModel(freeRows).map(cheapestProvider).filter(Boolean)
-    .map(row => ({ ...row, freeScore: (row.quality ?? 0) * 0.65 + (row.speedScore ?? 0) * 35 }))
-    .sort((a, b) => b.freeScore - a.freeScore || a.popularityRank - b.popularityRank || a.id.localeCompare(b.id));
+  const completeAnalysis = row => Number.isFinite(row.analysis?.intelligence) &&
+    Number.isFinite(row.analysis?.speed) && row.analysis.speed > 0 && Number.isFinite(row.analysis?.costPerTask);
+  const analysisRows = unique.filter(completeAnalysis);
+  const rankingRows = analysisRows.length ? analysisRows : unique;
+  const evidenceSource = analysisRows.length ? 'artificial-analysis' : 'openrouter-fallback';
+  const analysisDeals = uniqueDeals.filter(completeAnalysis);
+  const { best, unavailablePreferences } = rankBalanced(rankingRows);
+  const { ranked: deals } = rankBalanced(analysisDeals.length ? analysisDeals : uniqueDeals);
+  const baseFree = groupByModel(freeRows).map(cheapestProvider).filter(Boolean);
+  const analysisFree = baseFree.filter(row => Number.isFinite(row.analysis?.intelligence) &&
+    Number.isFinite(row.analysis?.speed) && row.analysis.speed > 0);
+  const freeEvidence = analysisFree.length ? analysisFree : baseFree;
+  const freeModels = analysisFree.length
+    ? rankByPreferences(freeEvidence, { smarter: true, faster: true })
+      .map(row => ({ ...row, freeScore: row.preferenceScore * 100 }))
+    : freeEvidence.map(row => ({ ...row, freeScore: (row.quality ?? 0) * 0.65 + (row.speedScore ?? 0) * 35 }))
+      .sort((a, b) => b.freeScore - a.freeScore || a.popularityRank - b.popularityRank || a.id.localeCompare(b.id));
   return {
     best,
     deals: deals.slice(0, 6),
@@ -182,6 +197,7 @@ export function recommendations(
     checked,
     total: models.length,
     priorities: { cheaper: true, smarter: true, faster: true },
+    evidenceSource,
     unavailablePreferences,
   };
 }

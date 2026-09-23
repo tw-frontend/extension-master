@@ -27,6 +27,29 @@ test('each individual preference selects the matching evidence leader', () => {
   assert.equal(rankByPreferences(rows, { faster: true })[0].id, 'fast/model');
 });
 
+test('Artificial Analysis fields replace fallback evidence for all three choices', () => {
+  const candidates = [
+    { id: 'fallback-leader', cost: 1, quality: 100, speedScore: 1, popularityRank: 1,
+      analysis: { intelligence: 20, speed: 20, costPerTask: 10 } },
+    { id: 'analysis-leader', cost: 9, quality: 10, speedScore: .1, popularityRank: 2,
+      analysis: { intelligence: 90, speed: 200, costPerTask: .1 } },
+  ];
+  for (const priorities of [{ cheaper: true }, { smarter: true }, { faster: true },
+    { cheaper: true, smarter: true, faster: true }]) {
+    assert.equal(rankByPreferences(candidates, priorities)[0].id, 'analysis-leader');
+  }
+});
+
+test('Artificial Analysis task cost breaks equal-score ties before request cost', () => {
+  const candidates = [
+    { id: 'cheap-request', cost: .01, popularityRank: 1,
+      analysis: { intelligence: 80, speed: 100, costPerTask: 2 } },
+    { id: 'cheap-task', cost: 10, popularityRank: 2,
+      analysis: { intelligence: 80, speed: 100, costPerTask: .2 } },
+  ];
+  assert.equal(rankByPreferences(candidates, { smarter: true, faster: true })[0].id, 'cheap-task');
+});
+
 test('selected preferences are combined with equal normalized weight', () => {
   const ranked = rankByPreferences(rows, { cheaper: true, smarter: true });
   assert.equal(ranked[0].id, 'balanced/model');

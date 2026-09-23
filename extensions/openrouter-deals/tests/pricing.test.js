@@ -73,15 +73,15 @@ test('combined daily choices retain provisional price and speed results without 
   assert.deepEqual(result.unavailablePreferences, ['smarter']);
   assert.deepEqual(result.best.matchedPreferences, ['cheaper', 'faster']);
 });
-test('faster preference ranks endpoint speed and excludes missing measurements', () => {
+test('Daily Deals remains balanced when only the faster Developer preference is selected', () => {
   const state = stateFor([
     ['qwen/model', .001, .5, 0, 2, 40],
     ['google/model', .004, .2, 0, .2, 300],
     ['xiaomi/model', .0001, .9],
   ]);
   const result = recommendations(state, { ...DEFAULT_SETTINGS, priorities: { faster: true } }, now);
-  assert.equal(result.best.id, 'google/model');
-  assert.deepEqual(result.deals.map(row => row.id), ['google/model', 'qwen/model']);
+  assert.equal(result.best.id, 'qwen/model');
+  assert.deepEqual(result.deals.map(row => row.id), ['qwen/model', 'google/model']);
 });
 test('unavailable providers and over-limit endpoints cannot win', () => {
   const state = stateFor([['z-ai/glm', .001, .5, -2], ['google/ok', .002]]);
@@ -117,6 +117,23 @@ test('Daily Deals ignores Developer Picks checkboxes and favors balanced value o
     recommendations(state, { ...DEFAULT_SETTINGS, priorities }, now));
   assert.ok(results.every(result => result.best.id === 'openai/model'));
   assert.ok(results.every(result => result.best.preferenceScore === results[0].best.preferenceScore));
+});
+test('Daily Deals uses the first complete Artificial Analysis balance independent of checkboxes', () => {
+  const state = stateFor([
+    ['openai/intelligence-only', .001, 0, 0, .2, 300],
+    ['anthropic/fast-only', .001, 0, 0, .1, 500],
+    ['google/balanced', .01, 0, 0, 2, 20],
+  ]);
+  state.artificialAnalysis = { asOf: '2026-09-23T00:00:00Z', byModel: {
+    'openai/intelligence-only': { intelligence: 100, speed: 20, costPerTask: 8 },
+    'anthropic/fast-only': { intelligence: 20, speed: 500, costPerTask: 5 },
+    'google/balanced': { intelligence: 80, speed: 200, costPerTask: .2 },
+  } };
+  const results = [{ cheaper: true }, { smarter: true }, { faster: true }].map(priorities =>
+    recommendations(state, { ...DEFAULT_SETTINGS, priorities }, now));
+  assert.ok(results.every(result => result.best.id === 'google/balanced'));
+  assert.ok(results.every(result => result.evidenceSource === 'artificial-analysis'));
+  assert.equal(results[0].best.analysis.costPerTask, .2);
 });
 test('free view ranks verified free models by quality and speed regardless of include-free setting', () => {
   const state = stateFor([

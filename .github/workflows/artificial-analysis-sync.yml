@@ -1,0 +1,47 @@
+name: Artificial Analysis Snapshot
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: artificial-analysis-snapshot
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      ARTIFICIAL_ANALYSIS_API_KEY: ${{ secrets.ARTIFICIAL_ANALYSIS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Explain inactive integration
+        if: env.ARTIFICIAL_ANALYSIS_API_KEY == ''
+        run: echo "Add a licensed Artificial Analysis Commercial API key as ARTIFICIAL_ANALYSIS_API_KEY to activate this workflow."
+
+      - name: Refresh licensed benchmark snapshot
+        if: env.ARTIFICIAL_ANALYSIS_API_KEY != ''
+        run: node scripts/sync-artificial-analysis.mjs
+
+      - name: Commit changed snapshot
+        if: env.ARTIFICIAL_ANALYSIS_API_KEY != ''
+        run: |
+          if git diff --quiet -- data/artificial-analysis.json; then
+            echo "Snapshot is unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- data/artificial-analysis.json
+          git commit -m "chore: :bar_chart: refresh licensed Artificial Analysis model metrics"
+          git pull --rebase origin main
+          git push

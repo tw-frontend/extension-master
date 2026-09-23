@@ -1,18 +1,27 @@
 {
   "id": "openrouter-deals",
   "name": "OpenRouter Daily Deals",
-  "shortDescription": "Recent models from seven makers, balanced daily deals, and ranked free picks.",
-  "description": "A dependency-free Chrome extension (MV3) that compares recent versions from OpenAI, Anthropic, Z.ai, Xiaomi, Qwen, Google and DeepSeek within OpenRouter's weekly top 200 text models. Cheaper, Smarter, and Faster customize Developer Picks with equal weight; Daily Deals independently recommends a balanced model using benchmark quality, relative speed, and request cost. Top Free ranks verified zero-cost models by quality and speed. Public catalog benchmarks and OpenRouter speed ordering work without a key, while an optional local key refreshes additional benchmark data. Cards show provider pricing, estimated cost, available performance measurements, and Nitro guidance. No inference requests, analytics, or remote scripts are used.",
-  "version": "1.3.5",
+  "shortDescription": "Artificial Analysis ranked picks and balanced daily deals for recent OpenRouter models.",
+  "description": "A dependency-free Chrome extension (MV3) that compares recent versions from OpenAI, Anthropic, Z.ai, Xiaomi, Qwen, Google and DeepSeek within OpenRouter's weekly top 200 text models. A licensed, server-refreshed Artificial Analysis snapshot supplies Intelligence Index, output speed and cost-per-task evidence without exposing its API key or scraping pages. Cheaper, Smarter and Faster customize Developer Picks with equal weight; Daily Deals independently balances all three metrics equally. Top Free ranks verified zero-cost models by intelligence and speed. OpenRouter evidence remains a clearly labeled fallback when the licensed snapshot is unavailable.",
+  "version": "1.4.0",
   "status": "stable",
   "icon": "icons/icon-128.png",
-  "browserSupport": ["chrome", "edge", "brave"],
-  "categories": ["ai", "developer-tools"],
+  "browserSupport": [
+    "chrome",
+    "edge",
+    "brave"
+  ],
+  "categories": [
+    "ai",
+    "developer-tools"
+  ],
   "repositoryPath": "extensions/openrouter-deals",
   "screenshots": [],
   "features": [
     "Combinable Cheaper, Smarter and Faster preference buttons with equal weighting",
     "Personalized Developer Picks and independent balanced Daily Deals",
+    "Licensed Artificial Analysis intelligence, output speed and cost-per-task rankings with visible attribution",
+    "Server-side daily metric refresh with exact OpenRouter model IDs and no browser API key",
     "Only recent versions from OpenAI, Anthropic, Z.ai, Xiaomi, Qwen, Google and DeepSeek in the weekly top 200",
     "Ranked Top Free view for verified zero-cost models",
     "Live provider quotes: input/output prices, discount percentage, per-request cost",
@@ -29,10 +38,20 @@
     "Click Load unpacked and select the extracted folder (the one containing manifest.json).",
     "Open the popup — Developer picks is the default tab; the first full scan takes ~12 minutes and refreshes every six hours while Chrome runs."
   ],
-  "permissions": ["storage", "alarms"],
-  "hostPermissions": ["https://openrouter.ai/*"],
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "hostPermissions": [
+    "https://openrouter.ai/*",
+    "https://raw.githubusercontent.com/*"
+  ],
   "build": {
     "outputDir": ".",
-    "exclude": ["tests", "README.md", "package.json"]
+    "exclude": [
+      "tests",
+      "README.md",
+      "package.json"
+    ]
   }
 }

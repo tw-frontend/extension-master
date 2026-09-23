@@ -33,7 +33,7 @@ function fixture(withBenchmarks = true) {
     'z-ai/value': { coding: 84, intelligence: 80, agentic: 82 },
     'xiaomi/critical': { coding: 86, intelligence: 94, agentic: 93 },
   } } : null;
-  return { schema: 4, models, details, benchmarks };
+  return { schema: 5, models, details, benchmarks };
 }
 test('custom preferences rank five matches without provider rules or fixed purposes', () => {
   const result = developerPicks(fixture(), {
@@ -58,6 +58,23 @@ test('smarter and faster preferences use their own evidence', () => {
   assert.equal(developerPicks(fixture(false), {
     ...DEFAULT_SETTINGS, priorities: { smarter: true },
   }, now).picks.length, 0);
+});
+test('Developer Picks uses Artificial Analysis intelligence, speed and task cost', () => {
+  const state = fixture();
+  state.artificialAnalysis = { asOf: '2026-09-23T00:00:00Z', byModel: Object.fromEntries(
+    state.models.map((model, index) => [model.id, {
+      intelligence: index === 1 ? 99 : 40,
+      speed: index === 2 ? 400 : 20,
+      costPerTask: index === 3 ? .01 : 5,
+    }]),
+  ) };
+  assert.equal(developerPicks(state, { ...DEFAULT_SETTINGS, priorities: { smarter: true } }, now).picks[0].id,
+    'anthropic/architect');
+  assert.equal(developerPicks(state, { ...DEFAULT_SETTINGS, priorities: { faster: true } }, now).picks[0].id,
+    'google/agent');
+  const cheap = developerPicks(state, { ...DEFAULT_SETTINGS, priorities: { cheaper: true } }, now);
+  assert.equal(cheap.picks[0].id, 'z-ai/value');
+  assert.equal(cheap.evidenceSource, 'artificial-analysis');
 });
 test('every individual and combined choice returns matches from public catalog evidence', () => {
   const state = fixture(false);
